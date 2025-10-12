@@ -1,0 +1,23 @@
+{
+  "model_type": "sqrt_hybrid_5000_samples",
+  "process_input_dim": 39,
+  "spectral_input_dim": 2200,
+  "target_name": "Penicillin concentration(P:g/L)",
+  "target_transformation": "square_root",
+  "performance": {
+    "mse": 0.935935378074646,
+    "rmse": 0.9674375318720305,
+    "mae": 0.6705466508865356,
+    "r2": 0.9904561638832092,
+    "mape": 183.3976287841797
+  },
+  "training_samples": 4000,
+  "test_samples": 1000,
+  "architecture_improvements": [
+    "Square root transformation (more stable than log)",
+    "5000 samples (more data but potentially noisier)",
+    "Enhanced CNN architecture with batch normalization",
+    "Improved dropout strategy",
+    "Better training dynamics than log transformation"
+  ]
+}
