@@ -49,6 +49,8 @@ if 'data' not in st.session_state:
     st.session_state.data = None
 if 'preprocessed_data' not in st.session_state:
     st.session_state.preprocessed_data = None
+if 'preprocessed_data_viz' not in st.session_state:
+    st.session_state.preprocessed_data_viz = None
 if 'predictions' not in st.session_state:
     st.session_state.predictions = {}
 if 'prediction_history' not in st.session_state:
@@ -311,7 +313,11 @@ def main():
                 st.subheader("Preprocessed Spectra")
                 
                 # Plot preprocessed spectra (before final StandardScaler for dramatic visualization)
-                preprocessed_spectra = st.session_state.preprocessed_data_viz[:20]
+                if hasattr(st.session_state, 'preprocessed_data_viz') and st.session_state.preprocessed_data_viz is not None:
+                    preprocessed_spectra = st.session_state.preprocessed_data_viz[:20]
+                else:
+                    # Fallback to regular preprocessed data if visualization data not available
+                    preprocessed_spectra = st.session_state.preprocessed_data[:20]
                 
                 # Use the same wavelength range as raw data (350-1750 cm⁻¹)
                 preprocessed_wavelengths = wavelengths
