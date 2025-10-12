@@ -18,5 +18,8 @@ pydantic>=2.8.0
 # Machine learning
 tensorflow>=2.15.0
 
+# Spectral preprocessing
+chemotools>=1.0.0
+
 # Additional utilities
 requests>=2.31.0
