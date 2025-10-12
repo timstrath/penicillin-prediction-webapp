@@ -84,7 +84,7 @@ def load_models():
 def load_data():
     """Load the spectral data"""
     try:
-        data_file = './app/Mendeley_data/100_Batches_IndPenSim_V3.csv'  # Updated path
+        data_file = './test_data/test_samples.csv'  # Test data for deployment
         if os.path.exists(data_file):
             # Load a subset for demonstration (first 1000 rows)
             data = pd.read_csv(data_file, nrows=1000)
