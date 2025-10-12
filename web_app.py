@@ -112,18 +112,34 @@ def preprocess_data(data, pipeline):
         # Create a copy to avoid modifying the original data
         data_copy = data.copy()
         
-        # Fill NaN values in spectral columns with 0 (same as training data)
-        numeric_cols = data_copy.select_dtypes(include=[np.number]).columns
-        spectral_cols = [col for col in numeric_cols if str(col).replace('.', '').isdigit()]
-        
-        if spectral_cols:
-            data_copy[spectral_cols] = data_copy[spectral_cols].fillna(0)
+        # Fill ALL NaN values with 0 (same as training data)
+        # This is critical for the preprocessing pipeline to work
+        data_copy = data_copy.fillna(0)
         
         # Apply the preprocessing pipeline
         preprocessed = pipeline.transform(data_copy)
         return preprocessed
     except Exception as e:
         st.error(f"Error in preprocessing: {str(e)}")
+        return None
+
+def preprocess_data_for_visualization(data, pipeline):
+    """Apply preprocessing to the data but stop before final StandardScaler for visualization"""
+    try:
+        # Create a copy to avoid modifying the original data
+        data_copy = data.copy()
+        
+        # Fill ALL NaN values with 0 (same as training data)
+        data_copy = data_copy.fillna(0)
+        
+        # Apply preprocessing steps up to (but not including) the final StandardScaler
+        current_data = data_copy
+        for step_name, transformer in pipeline.steps[:-1]:  # Skip the last step (StandardScaler)
+            current_data = transformer.transform(current_data)
+        
+        return current_data
+    except Exception as e:
+        st.error(f"Error in preprocessing for visualization: {str(e)}")
         return None
 
 def make_predictions(data, elastic_model, pls_model=None):
@@ -161,6 +177,7 @@ def main():
             
             if st.session_state.models_loaded and st.session_state.data is not None:
                 st.session_state.preprocessed_data = preprocess_data(st.session_state.data, pipeline)
+                st.session_state.preprocessed_data_viz = preprocess_data_for_visualization(st.session_state.data, pipeline)
                 st.success("✅ Data and models loaded successfully!")
             else:
                 st.error("❌ Failed to load data or models. Please check the files.")
@@ -293,8 +310,8 @@ def main():
             with col2:
                 st.subheader("Preprocessed Spectra")
                 
-                # Plot preprocessed spectra
-                preprocessed_spectra = st.session_state.preprocessed_data[:20]
+                # Plot preprocessed spectra (before final StandardScaler for dramatic visualization)
+                preprocessed_spectra = st.session_state.preprocessed_data_viz[:20]
                 
                 # Use the same wavelength range as raw data (350-1750 cm⁻¹)
                 preprocessed_wavelengths = wavelengths
