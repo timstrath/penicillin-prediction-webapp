@@ -1,8 +1,10 @@
 # Data files (too large for GitHub)
 data_2000_samples/
-*.csv
 *.h5
 *.pkl
+
+# Allow test data for deployment
+!test_data/test_samples.csv
 
 # Python cache
 __pycache__/
