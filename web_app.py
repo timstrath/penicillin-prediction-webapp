@@ -83,12 +83,21 @@ def load_models():
         mlp_cnn_model = None
         try:
             import tensorflow as tf
-            mlp_cnn_model = tf.keras.models.load_model(os.path.join(models_dir, "best_sqrt_hybrid_5000_samples.h5"))
-            print("✅ MLP+1D-CNN model loaded successfully!")
+            model_path = os.path.join(models_dir, "best_sqrt_hybrid_5000_samples.h5")
+            print(f"🔍 Attempting to load MLP+1D-CNN model from: {model_path}")
+            print(f"🔍 Model file exists: {os.path.exists(model_path)}")
+            if os.path.exists(model_path):
+                mlp_cnn_model = tf.keras.models.load_model(model_path)
+                print("✅ MLP+1D-CNN model loaded successfully!")
+            else:
+                print("⚠️  MLP+1D-CNN model file not found at expected path.")
+        except ImportError as e:
+            print(f"⚠️  TensorFlow not available: {str(e)}")
         except FileNotFoundError:
-            print("⚠️  MLP+1D-CNN model not found.")
+            print("⚠️  MLP+1D-CNN model file not found.")
         except Exception as e:
             print(f"⚠️  Error loading MLP+1D-CNN model: {str(e)}")
+            print(f"⚠️  Error type: {type(e).__name__}")
         
         return pipeline, elastic_model, pls_model, mlp_cnn_model
     except Exception as e:
@@ -1849,9 +1858,159 @@ def main():
                         st.error(f"Error making MLP+1D-CNN predictions: {str(e)}")
                         st.info("🔄 **MLP+1D-CNN Model Status: Error in Prediction**")
                 else:
-                    # Model not available
+                    # Model not available - show demo mode
                     st.warning("⚠️ **MLP+1D-CNN Model Status: Model not loaded**")
                     st.info("The MLP+1D-CNN model file may not be available in the models directory.")
+                    
+                    # Show demo mode option
+                    if st.button("🎭 **Enable Demo Mode**", help="Show demo predictions using mock data"):
+                        st.session_state.demo_mode = True
+                        st.rerun()
+                    
+                    if st.session_state.get('demo_mode', False):
+                        st.success("🎭 **Demo Mode Active** - Showing mock MLP+1D-CNN predictions")
+                        
+                        # Create mock predictions for demonstration
+                        np.random.seed(42)  # For reproducible demo
+                        ground_truth = st.session_state.data["Penicillin concentration(P:g/L)"].values[:100]
+                        
+                        # Create realistic mock predictions (slightly better than PLS)
+                        mlp_cnn_pred = ground_truth + np.random.normal(0, 0.5, len(ground_truth))
+                        mlp_cnn_pred = np.clip(mlp_cnn_pred, 0, 30)  # Keep within reasonable range
+                        
+                        # Calculate performance metrics
+                        mlp_cnn_rmse = np.sqrt(mean_squared_error(ground_truth, mlp_cnn_pred))
+                        mlp_cnn_mae = mean_absolute_error(ground_truth, mlp_cnn_pred)
+                        mlp_cnn_r2 = r2_score(ground_truth, mlp_cnn_pred)
+                        mlp_cnn_mse = mean_squared_error(ground_truth, mlp_cnn_pred)
+                        
+                        # Display performance metrics
+                        st.subheader("📈 Performance Metrics (Demo)")
+                        col1, col2, col3, col4 = st.columns(4)
+                        
+                        with col1:
+                            st.metric("RMSE", f"{mlp_cnn_rmse:.3f} g/L")
+                        with col2:
+                            st.metric("MAE", f"{mlp_cnn_mae:.3f} g/L")
+                        with col3:
+                            st.metric("R² Score", f"{mlp_cnn_r2:.3f}")
+                        with col4:
+                            st.metric("MSE", f"{mlp_cnn_mse:.3f}")
+                        
+                        # Model Performance Analysis
+                        st.subheader("📊 Model Performance Analysis (Demo)")
+                        
+                        col1, col2, col3 = st.columns(3)
+                        
+                        with col1:
+                            # Prediction vs Actual scatter plot
+                            fig1 = go.Figure()
+                            
+                            fig1.add_trace(go.Scatter(
+                                x=ground_truth,
+                                y=mlp_cnn_pred,
+                                mode='markers',
+                                name='MLP+1D-CNN Predictions (Demo)',
+                                marker=dict(color='#9467bd', size=8, opacity=0.7),
+                                showlegend=True
+                            ))
+                            
+                            # Perfect prediction line
+                            min_val = min(min(ground_truth), min(mlp_cnn_pred))
+                            max_val = max(max(ground_truth), max(mlp_cnn_pred))
+                            fig1.add_trace(go.Scatter(
+                                x=[min_val, max_val],
+                                y=[min_val, max_val],
+                                mode='lines',
+                                name='Perfect Prediction',
+                                line=dict(color='#1f77b4', dash='dash'),
+                                showlegend=True
+                            ))
+                            
+                            fig1.update_layout(
+                                title="Prediction vs Actual (Demo)",
+                                xaxis_title="Actual (g/L)",
+                                yaxis_title="Predicted (g/L)",
+                                height=400,
+                                showlegend=True
+                            )
+                            
+                            st.plotly_chart(fig1, use_container_width=True, key="mlp_cnn_scatter_demo")
+                        
+                        with col2:
+                            # Residuals distribution
+                            residuals = mlp_cnn_pred - ground_truth
+                            fig2 = go.Figure()
+                            
+                            fig2.add_trace(go.Histogram(
+                                x=residuals,
+                                nbinsx=20,
+                                name='Residuals (Demo)',
+                                marker_color='#9467bd',
+                                opacity=0.7
+                            ))
+                            
+                            fig2.update_layout(
+                                title="Residuals Distribution (Demo)",
+                                xaxis_title="Residuals (g/L)",
+                                yaxis_title="Frequency",
+                                height=400,
+                                showlegend=True
+                            )
+                            
+                            st.plotly_chart(fig2, use_container_width=True, key="mlp_cnn_residuals_demo")
+                        
+                        with col3:
+                            # Concentration distribution
+                            fig3 = go.Figure()
+                            
+                            # Add actual concentration distribution
+                            fig3.add_trace(go.Histogram(
+                                x=ground_truth,
+                                nbinsx=20,
+                                name='Actual Concentrations',
+                                marker_color='#2ca02c',
+                                opacity=0.7
+                            ))
+                            
+                            # Add predicted concentration distribution
+                            fig3.add_trace(go.Histogram(
+                                x=mlp_cnn_pred,
+                                nbinsx=20,
+                                name='Predicted Concentrations (Demo)',
+                                marker_color='#9467bd',
+                                opacity=0.7
+                            ))
+                            
+                            fig3.update_layout(
+                                title="Concentration Distribution (Demo)",
+                                xaxis_title="Penicillin Concentration (g/L)",
+                                yaxis_title="Frequency",
+                                height=400,
+                                showlegend=True
+                            )
+                            
+                            st.plotly_chart(fig3, use_container_width=True, key="mlp_cnn_distribution_demo")
+                        
+                        # Prediction Results Table
+                        st.subheader("📈 Prediction Results (Demo)")
+                        
+                        # Create results DataFrame
+                        results_df = pd.DataFrame({
+                            'Sample': range(1, len(mlp_cnn_pred) + 1),
+                            'Actual (g/L)': ground_truth,
+                            'MLP+1D-CNN Predicted (g/L)': mlp_cnn_pred,
+                            'Residual (g/L)': mlp_cnn_pred - ground_truth,
+                            'Absolute Error (g/L)': np.abs(mlp_cnn_pred - ground_truth)
+                        })
+                        
+                        st.dataframe(results_df, use_container_width=True)
+                        
+                        st.info("🎭 **Note**: This is demo mode showing mock predictions. The actual MLP+1D-CNN model will be loaded when the model file is available.")
+                        
+                        if st.button("🔄 **Exit Demo Mode**"):
+                            st.session_state.demo_mode = False
+                            st.rerun()
                     st.markdown("""
                     The MLP+1D-CNN model is currently in development and not yet integrated into the prediction pipeline.
                     
