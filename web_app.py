@@ -307,7 +307,7 @@ def main():
             col1, col2 = st.columns(2)
             
             with col1:
-                st.subheader("Normalized Raman Spectra")
+                st.subheader("Raw Raman Spectra")
                 
                 # Find spectral columns (numeric columns that represent wavelengths)
                 numeric_cols = st.session_state.data.select_dtypes(include=[np.number]).columns
@@ -315,8 +315,8 @@ def main():
                 spectral_cols = [col for col in numeric_cols if str(col).replace('.', '').isdigit()]
                 
                 if len(spectral_cols) > 0:
-                    # Use the actual spectral columns
-                    raw_spectra = st.session_state.data[spectral_cols].iloc[:20].copy()
+                    # Use the actual spectral columns - TRULY RAW DATA
+                    raw_spectra = st.session_state.data[spectral_cols].iloc[:10].copy()
                     # Fill NaN values for visualization (but don't modify original data)
                     raw_spectra = raw_spectra.fillna(0)
                     # Convert column names to numeric for wavelengths
@@ -327,15 +327,7 @@ def main():
                         wavelengths = wavelengths[sort_indices]
                         raw_spectra = raw_spectra.iloc[:, sort_indices]
                         
-                        # Apply RangeCut to raw data to match preprocessed data (350-1750 cm⁻¹)
-                        start_idx = np.where(wavelengths >= 350)[0]
-                        end_idx = np.where(wavelengths <= 1750)[0]
-                        
-                        if len(start_idx) > 0 and len(end_idx) > 0:
-                            start_idx = start_idx[0]
-                            end_idx = end_idx[-1] + 1
-                            wavelengths = wavelengths[start_idx:end_idx]
-                            raw_spectra = raw_spectra.iloc[:, start_idx:end_idx]
+                        # NO RANGECUT - Show the full raw spectral range
                         
                     except ValueError:
                         # If conversion fails, use the RangeCut range
@@ -384,13 +376,13 @@ def main():
                     if plotted_count >= 10:  # Limit to 10 spectra
                         break
                 
-                fig_raw.update_layout(
-                    title="Normalized Raman Spectra (First 10)",
-                    xaxis_title="Wavelength (cm⁻¹)",
-                    yaxis_title="Intensity (Normalized)",
-                    height=400,
-                    showlegend=False
-                )
+                    fig_raw.update_layout(
+                        title="Raw Raman Spectra (First 10) - Full Range",
+                        xaxis_title="Wavelength (cm⁻¹)",
+                        yaxis_title="Intensity (Raw)",
+                        height=400,
+                        showlegend=False
+                    )
                 
                 st.plotly_chart(fig_raw, use_container_width=True)
             
