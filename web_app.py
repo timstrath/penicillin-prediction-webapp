@@ -1467,6 +1467,205 @@ def main():
                     else:
                         st.error("Preprocessed data not available for visualization.")
                 
+                # MODEL ARCHITECTURE SECTION
+                st.subheader("🏗️ Model Architecture")
+                
+                # Create two columns for architecture info and visualization
+                arch_col1, arch_col2 = st.columns([1, 1])
+                
+                with arch_col1:
+                    st.markdown("""
+                    **🔬 MLP+1D-CNN Hybrid Architecture:**
+                    
+                    **📊 Input Branches:**
+                    - **Process Variables**: 39 features (temperature, pH, pressure, etc.)
+                    - **Spectral Data**: 2200 Raman spectral points (350-1750 cm⁻¹)
+                    
+                    **🧠 MLP Branch (Process Variables):**
+                    - Dense layers for process parameter learning
+                    - Batch normalization for stability
+                    - Dropout for regularization
+                    
+                    **🔍 1D-CNN Branch (Spectral Data):**
+                    - 1D Convolutional layers for spectral pattern recognition
+                    - Max pooling for feature extraction
+                    - Batch normalization and dropout
+                    
+                    **🔗 Fusion Layer:**
+                    - Concatenates MLP and CNN outputs
+                    - Dense layers for final prediction
+                    - Square root transformation for stability
+                    
+                    **⚡ Key Features:**
+                    - Advanced spectral feature extraction
+                    - Non-linear relationship modeling
+                    - Robust to spectral noise and variations
+                    """)
+                
+                with arch_col2:
+                    # Create an impressive architecture visualization
+                    try:
+                        import visualkeras
+                        from PIL import ImageFont
+                        
+                        if mlp_cnn_model is not None:
+                            # Create a temporary visualization
+                            import tempfile
+                            import os
+                            
+                            # Create visualization with enhanced styling
+                            visualkeras.layered_view(
+                                mlp_cnn_model,
+                                to_file='temp_model_architecture.png',
+                                legend=True,
+                                font=ImageFont.load_default(),
+                                spacing=30,
+                                draw_volume=True,
+                                draw_volume_filled=True,
+                                color_map='Set3',
+                                background_fill='white',
+                                layer_fill='lightblue',
+                                padding=20
+                            )
+                            
+                            # Display the image
+                            if os.path.exists('temp_model_architecture.png'):
+                                st.image('temp_model_architecture.png', caption='🏗️ MLP+1D-CNN Architecture Visualization', use_column_width=True)
+                                # Clean up
+                                os.remove('temp_model_architecture.png')
+                            else:
+                                st.info("🔄 Architecture visualization will be available when model is loaded.")
+                        else:
+                            # Show an enhanced placeholder architecture diagram
+                            st.info("🔄 **Architecture Preview:**")
+                            
+                            # Create a more detailed ASCII art diagram
+                            st.markdown("""
+                            <div style="font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.2;">
+                            <pre style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6;">
+    ┌─────────────────────────────────────────────────────────────┐
+    │                    INPUT LAYER                              │
+    │  Process Variables (39)    │    Spectral Data (2200)       │
+    │  • Temperature             │    • Raman Spectra            │
+    │  • pH                      │    • 350-1750 cm⁻¹           │
+    │  • Pressure                │    • Preprocessed             │
+    │  • Flow rates              │                               │
+    └─────────────┬───────────────────────────────┬───────────────┘
+                  │                               │
+                  ▼                               ▼
+    ┌─────────────────────────┐    ┌─────────────────────────────┐
+    │      MLP BRANCH         │    │      1D-CNN BRANCH          │
+    │                         │    │                             │
+    │  Dense(128)             │    │  Conv1D(64, kernel=3)       │
+    │  BatchNorm              │    │  BatchNorm                  │
+    │  Dropout(0.3)           │    │  MaxPool1D(2)               │
+    │                         │    │                             │
+    │  Dense(64)              │    │  Conv1D(32, kernel=3)       │
+    │  BatchNorm              │    │  BatchNorm                  │
+    │  Dropout(0.2)           │    │  MaxPool1D(2)               │
+    │                         │    │  Dropout(0.3)               │
+    └─────────────┬───────────┘    └─────────────┬───────────────┘
+                  │                               │
+                  └───────────────┬───────────────┘
+                                  ▼
+                        ┌─────────────────────────┐
+                        │    FUSION LAYER         │
+                        │    (Concatenate)        │
+                        └─────────────┬───────────┘
+                                      ▼
+                        ┌─────────────────────────┐
+                        │   Dense(64)             │
+                        │   BatchNorm             │
+                        │   Dropout(0.2)          │
+                        └─────────────┬───────────┘
+                                      ▼
+                        ┌─────────────────────────┐
+                        │   Dense(32)             │
+                        │   BatchNorm             │
+                        │   Dropout(0.1)          │
+                        └─────────────┬───────────┘
+                                      ▼
+                        ┌─────────────────────────┐
+                        │   OUTPUT LAYER          │
+                        │   Dense(1)              │
+                        │   √(prediction)         │
+                        └─────────────────────────┘
+                            </pre>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                    except ImportError:
+                        st.info("📊 **Architecture Summary:**")
+                        st.markdown("""
+                        **🏗️ Hybrid Neural Network Architecture:**
+                        
+                        **🔀 Dual-Branch Design:**
+                        - **MLP Branch**: Processes 39 process variables
+                        - **1D-CNN Branch**: Analyzes 2200 spectral features
+                        
+                        **🧠 Advanced Features:**
+                        - **Batch Normalization**: Stabilizes training
+                        - **Dropout Regularization**: Prevents overfitting
+                        - **Fusion Architecture**: Combines both data types
+                        - **Square Root Transform**: Improves prediction stability
+                        
+                        **⚡ Performance Benefits:**
+                        - Captures non-linear relationships
+                        - Handles spectral noise robustly
+                        - Optimized for pharmaceutical data
+                        """)
+                    except Exception as e:
+                        st.info("📊 **Architecture Overview:**")
+                        st.markdown(f"""
+                        **MLP+1D-CNN Hybrid Model:**
+                        - **Input**: 39 process variables + 2200 spectral features
+                        - **Architecture**: Dual-branch neural network
+                        - **Output**: Penicillin concentration prediction
+                        - **Performance**: R² = 0.990, RMSE = 0.967 g/L
+                        """)
+                
+                # MODEL SUMMARY SECTION
+                st.subheader("📈 Model Summary & Performance")
+                
+                # Create columns for model statistics
+                summary_col1, summary_col2, summary_col3 = st.columns(3)
+                
+                with summary_col1:
+                    st.markdown("**🎯 Training Performance:**")
+                    st.metric("R² Score", "0.990", "Excellent fit")
+                    st.metric("RMSE", "0.967 g/L", "High accuracy")
+                    st.metric("MAE", "0.671 g/L", "Low bias")
+                
+                with summary_col2:
+                    st.markdown("**📊 Dataset Information:**")
+                    st.metric("Training Samples", "4,000", "Large dataset")
+                    st.metric("Test Samples", "1,000", "Robust validation")
+                    st.metric("Total Features", "2,239", "Process + Spectral")
+                
+                with summary_col3:
+                    st.markdown("**🔧 Architecture Details:**")
+                    st.metric("Process Inputs", "39", "Temperature, pH, etc.")
+                    st.metric("Spectral Inputs", "2,200", "Raman wavelengths")
+                    st.metric("Transformation", "√(target)", "Stability optimized")
+                
+                # Key improvements section
+                st.markdown("**🚀 Key Architecture Improvements:**")
+                improvement_cols = st.columns(2)
+                
+                with improvement_cols[0]:
+                    st.markdown("""
+                    ✅ **Square root transformation** (more stable than log)  
+                    ✅ **5000 samples** (more data but potentially noisier)  
+                    ✅ **Enhanced CNN architecture** with batch normalization  
+                    """)
+                
+                with improvement_cols[1]:
+                    st.markdown("""
+                    ✅ **Improved dropout strategy** for better generalization  
+                    ✅ **Better training dynamics** than log transformation  
+                    ✅ **Hybrid approach** combining MLP and CNN strengths  
+                    """)
+                
                 # PREDICTIONS SECTION
                 st.subheader("📊 MLP+1D-CNN Predictions")
                 

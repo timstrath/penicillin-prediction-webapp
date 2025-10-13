@@ -18,6 +18,10 @@ pydantic>=2.8.0
 # Machine learning
 tensorflow>=2.15.0
 
+# Neural network visualization
+visualkeras>=0.0.2
+Pillow>=10.0.0
+
 # Spectral preprocessing
 chemotools>=0.2.0,<1.0.0
 
