@@ -152,7 +152,7 @@ def preprocess_data(data, pipeline):
         return None
 
 def preprocess_data_for_visualization(data, pipeline):
-    """Apply complete preprocessing pipeline including StandardScaler for visualization"""
+    """Apply preprocessing up to derivative step (before StandardScaler) for more informative visualization"""
     try:
         # Create a copy to avoid modifying the original data
         data_copy = data.copy()
@@ -171,10 +171,10 @@ def preprocess_data_for_visualization(data, pipeline):
             expected_columns = pipeline.feature_names_in_
             data_copy = data_copy[expected_columns]
         
-        # Apply ALL preprocessing steps including the final StandardScaler
+        # Apply preprocessing steps up to (but not including) the final StandardScaler
         # Use the same data structure as training
         current_data = data_copy
-        for step_name, transformer in pipeline.steps:  # Include ALL steps including StandardScaler
+        for step_name, transformer in pipeline.steps[:-1]:  # Skip the last step (StandardScaler)
             current_data = transformer.transform(current_data)
         
         return current_data
@@ -425,12 +425,12 @@ def main():
                         ))
                     
                     fig_processed.update_layout(
-                    title="Preprocessed Spectra (First 10)",
-                    xaxis_title="Wavelength (cm⁻¹)",
-                    yaxis_title="Intensity (Processed)",
-                    height=400,
-                    showlegend=False
-                )
+                        title="Preprocessed Spectra (First 10) - After Derivative",
+                        xaxis_title="Wavelength (cm⁻¹)",
+                        yaxis_title="Intensity (After Derivative)",
+                        height=400,
+                        showlegend=False
+                    )
                 
                     st.plotly_chart(fig_processed, use_container_width=True)
             
@@ -438,10 +438,10 @@ def main():
             st.subheader("📋 Preprocessing Steps Applied")
             steps = [
                 "1. RangeCut: 350-1750 cm⁻¹",
-                "2. Linear Correction: Baseline removal",
+                "2. Linear Correction: Baseline removal", 
                 "3. Savitzky-Golay Filter: Smoothing",
-                "4. Norris-Williams Derivative: First derivative",
-                "5. Standard Scaling: Normalization"
+                "4. Norris-Williams Derivative: First derivative (shown in right plot)",
+                "5. Standard Scaling: Normalization (applied for model input)"
             ]
             
             for step in steps:
