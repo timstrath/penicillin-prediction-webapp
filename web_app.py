@@ -412,9 +412,10 @@ def main():
     """, unsafe_allow_html=True)
     
     # Main tabs
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "🔬 Preprocessing", 
         "📊 Results & Predictions", 
+        "🔵 ElasticNet Model",
         "📈 History", 
         "⚙️ Settings",
         "🏛️ Model Registry"
@@ -815,6 +816,223 @@ def main():
             st.warning("Please load models and data first.")
     
     with tab3:
+        st.header("🔵 ElasticNet Model - Preprocessing & Predictions")
+        
+        if st.session_state.data is not None and st.session_state.models_loaded:
+            # Load models
+            pipeline, elastic_model, pls_model = load_models()
+            
+            if pipeline is not None and elastic_model is not None:
+                # PREPROCESSING VISUALIZATION
+                st.subheader("🔬 Preprocessing Pipeline")
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.subheader("Raw Raman Spectra")
+                    
+                    # Find spectral columns (numeric columns that represent wavelengths)
+                    numeric_cols = st.session_state.data.select_dtypes(include=[np.number]).columns
+                    spectral_cols = [col for col in numeric_cols if str(col).replace('.', '').isdigit()]
+                    
+                    if len(spectral_cols) > 0:
+                        # Use the actual spectral columns - TRULY RAW DATA
+                        raw_spectra = st.session_state.data[spectral_cols].iloc[:10].copy()
+                        raw_spectra = raw_spectra.fillna(0)
+                        
+                        try:
+                            wavelengths = np.array([float(col) for col in spectral_cols])
+                            # Apply RangeCut: 350-1750 cm⁻¹
+                            mask = (wavelengths >= 350) & (wavelengths <= 1750)
+                            wavelengths = wavelengths[mask]
+                            raw_spectra = raw_spectra.iloc[:, mask]
+                            
+                            # Sort wavelengths in ascending order
+                            sort_indices = np.argsort(wavelengths)
+                            wavelengths = wavelengths[sort_indices]
+                            raw_spectra = raw_spectra.iloc[:, sort_indices]
+                            
+                            # Create plot
+                            fig = go.Figure()
+                            
+                            for i in range(min(10, len(raw_spectra))):
+                                fig.add_trace(go.Scatter(
+                                    x=wavelengths,
+                                    y=raw_spectra.iloc[i].values,
+                                    mode='lines',
+                                    name=f'Sample {i+1}',
+                                    line=dict(width=1),
+                                    opacity=0.7
+                                ))
+                            
+                            fig.update_layout(
+                                title="Raw Raman Spectra (First 10) - 350-1750 cm⁻¹",
+                                xaxis_title="Wavelength (cm⁻¹)",
+                                yaxis_title="Intensity (Raw Counts)",
+                                height=400,
+                                showlegend=True
+                            )
+                            
+                            st.plotly_chart(fig, use_container_width=True)
+                            
+                        except Exception as e:
+                            st.error(f"Error processing raw spectra: {str(e)}")
+                    else:
+                        st.error("No spectral columns found in the data.")
+                
+                with col2:
+                    st.subheader("Preprocessed Spectra")
+                    
+                    # Get preprocessed data for visualization (stops before StandardScaler)
+                    if st.session_state.preprocessed_data_viz is not None:
+                        preprocessed_viz = st.session_state.preprocessed_data_viz[:10]
+                        
+                        # Create wavelengths for preprocessed data (assuming same range after RangeCut)
+                        preprocessed_wavelengths = np.linspace(350, 1750, preprocessed_viz.shape[1])
+                        
+                        fig = go.Figure()
+                        
+                        for i in range(min(10, len(preprocessed_viz))):
+                            fig.add_trace(go.Scatter(
+                                x=preprocessed_wavelengths,
+                                y=preprocessed_viz[i],
+                                mode='lines',
+                                name=f'Sample {i+1}',
+                                line=dict(width=1),
+                                opacity=0.7
+                            ))
+                        
+                        fig.update_layout(
+                            title="Preprocessed Spectra (First 10) - After Derivative",
+                            xaxis_title="Wavelength (cm⁻¹)",
+                            yaxis_title="Intensity (After Derivative)",
+                            height=400,
+                            showlegend=True
+                        )
+                        
+                        st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.error("Preprocessed data not available for visualization.")
+                
+                # PREDICTIONS SECTION
+                st.subheader("📊 ElasticNet Predictions")
+                
+                # Auto-run predictions
+                num_spectra = min(100, len(st.session_state.preprocessed_data))
+                subset_data = st.session_state.preprocessed_data[:num_spectra]
+                
+                # Make predictions
+                elasticnet_pred = elastic_model.predict(subset_data)
+                
+                # Get target column and actual values
+                target_col = 'Penicillin concentration(P:g/L)'
+                if target_col in st.session_state.data.columns:
+                    ground_truth = st.session_state.data[target_col].values[:len(elasticnet_pred)]
+                    
+                    # Calculate performance metrics
+                    elasticnet_rmse = np.sqrt(mean_squared_error(ground_truth, elasticnet_pred))
+                    elasticnet_mae = mean_absolute_error(ground_truth, elasticnet_pred)
+                    elasticnet_r2 = r2_score(ground_truth, elasticnet_pred)
+                    elasticnet_mse = mean_squared_error(ground_truth, elasticnet_pred)
+                    
+                    # Performance metrics
+                    st.subheader("📈 Performance Metrics")
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        st.metric("RMSE", f"{elasticnet_rmse:.3f} g/L")
+                    with col2:
+                        st.metric("MAE", f"{elasticnet_mae:.3f} g/L")
+                    with col3:
+                        st.metric("R² Score", f"{elasticnet_r2:.3f}")
+                    with col4:
+                        st.metric("MSE", f"{elasticnet_mse:.3f}")
+                    
+                    # Single model prediction vs actual plot
+                    st.subheader("🎯 Prediction vs Actual Values")
+                    
+                    fig = go.Figure()
+                    
+                    # Add scatter plot
+                    fig.add_trace(go.Scatter(
+                        x=ground_truth,
+                        y=elasticnet_pred,
+                        mode='markers',
+                        name='ElasticNet Predictions',
+                        marker=dict(
+                            color='#d62728',
+                            size=8,
+                            opacity=0.7
+                        ),
+                        showlegend=True
+                    ))
+                    
+                    # Add perfect prediction line
+                    min_val = min(min(ground_truth), min(elasticnet_pred))
+                    max_val = max(max(ground_truth), max(elasticnet_pred))
+                    fig.add_trace(go.Scatter(
+                        x=[min_val, max_val],
+                        y=[min_val, max_val],
+                        mode='lines',
+                        name='Perfect Prediction',
+                        line=dict(color='#1f77b4', dash='dash'),
+                        showlegend=True
+                    ))
+                    
+                    fig.update_layout(
+                        title="ElasticNet: Prediction vs Actual Values",
+                        xaxis_title="Actual Penicillin Concentration (g/L)",
+                        yaxis_title="Predicted Penicillin Concentration (g/L)",
+                        height=500,
+                        showlegend=True
+                    )
+                    
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Residuals distribution
+                    st.subheader("📊 Residuals Distribution")
+                    
+                    residuals = elasticnet_pred - ground_truth
+                    
+                    fig = go.Figure()
+                    fig.add_trace(go.Histogram(
+                        x=residuals,
+                        nbinsx=20,
+                        name='Residuals',
+                        marker_color='#d62728',
+                        opacity=0.7
+                    ))
+                    
+                    fig.update_layout(
+                        title="ElasticNet: Distribution of Prediction Residuals",
+                        xaxis_title="Residuals (Predicted - Actual)",
+                        yaxis_title="Frequency",
+                        height=400,
+                        showlegend=False
+                    )
+                    
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Prediction results table
+                    st.subheader("📈 Prediction Results")
+                    results_df = pd.DataFrame({
+                        'Sample': range(1, len(elasticnet_pred) + 1),
+                        'Actual (g/L)': ground_truth,
+                        'Predicted (g/L)': elasticnet_pred,
+                        'Residual (g/L)': residuals,
+                        'Error (%)': np.abs(residuals / ground_truth * 100)
+                    })
+                    
+                    st.dataframe(results_df, use_container_width=True)
+                    
+                else:
+                    st.error(f"Target column '{target_col}' not found in data.")
+            else:
+                st.error("ElasticNet model not available.")
+        else:
+            st.warning("Please load models and data first.")
+    
+    with tab4:
         st.header("📈 Prediction History")
         
         if st.session_state.prediction_history:
@@ -863,7 +1081,7 @@ def main():
         else:
             st.info("No prediction history available. Run some predictions to see history here.")
     
-    with tab4:
+    with tab5:
         st.header("⚙️ Settings")
         
         col1, col2 = st.columns(2)
@@ -918,7 +1136,7 @@ def main():
             st.write(f"- NumPy Version: {np.__version__}")
             st.write(f"- Plotly Version: {plotly.__version__}")
     
-    with tab5:
+    with tab6:
         st.header("🏛️ Model Registry - GMP Compliance")
         st.markdown("**Pharmaceutical Industry Model Versioning & Tracking System**")
         
