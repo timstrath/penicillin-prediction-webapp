@@ -187,14 +187,40 @@ def make_predictions(data, elastic_model, pls_model=None):
     predictions = {}
     
     try:
+        # Debug: Show input data info
+        st.write("🔍 **Debug - Model Input Data:**")
+        st.write(f"Input data shape: {data.shape}")
+        st.write(f"Input data range: {data.min():.3f} - {data.max():.3f}")
+        st.write(f"Input data mean: {data.mean():.3f}")
+        
+        # Debug: Show model info
+        st.write("🔍 **Debug - Model Info:**")
+        st.write(f"ElasticNet model type: {type(elastic_model)}")
+        if pls_model is not None:
+            st.write(f"PLS model type: {type(pls_model)}")
+        else:
+            st.write("PLS model: None")
+        
         # ElasticNet predictions
         elastic_predictions = elastic_model.predict(data)
         predictions['elasticnet'] = elastic_predictions
+        
+        # Debug: Show ElasticNet prediction info
+        st.write("🔍 **Debug - ElasticNet Predictions:**")
+        st.write(f"ElasticNet predictions shape: {elastic_predictions.shape}")
+        st.write(f"ElasticNet predictions range: {elastic_predictions.min():.3f} - {elastic_predictions.max():.3f}")
+        st.write(f"ElasticNet predictions mean: {elastic_predictions.mean():.3f}")
         
         # PLS predictions if model is available
         if pls_model is not None:
             pls_predictions = pls_model.predict(data)
             predictions['pls'] = pls_predictions
+            
+            # Debug: Show PLS prediction info
+            st.write("🔍 **Debug - PLS Predictions:**")
+            st.write(f"PLS predictions shape: {pls_predictions.shape}")
+            st.write(f"PLS predictions range: {pls_predictions.min():.3f} - {pls_predictions.max():.3f}")
+            st.write(f"PLS predictions mean: {pls_predictions.mean():.3f}")
         else:
             predictions['pls'] = None
             
@@ -485,6 +511,19 @@ def main():
                 # Use the real target values from the test data as ground truth
                 target_col = 'Penicillin concentration(P:g/L)'
                 ground_truth = st.session_state.data[target_col].values
+                
+                # Debug: Show raw data info
+                st.write("🔍 **Debug - Raw Data Info:**")
+                st.write(f"Raw data shape: {st.session_state.data.shape}")
+                st.write(f"Target column exists: {target_col in st.session_state.data.columns}")
+                st.write(f"Ground truth range: {ground_truth.min():.3f} - {ground_truth.max():.3f}")
+                st.write(f"Ground truth mean: {ground_truth.mean():.3f}")
+                
+                # Debug: Show preprocessed data info
+                st.write("🔍 **Debug - Preprocessed Data Info:**")
+                st.write(f"Preprocessed data shape: {st.session_state.preprocessed_data.shape}")
+                st.write(f"Preprocessed data range: {st.session_state.preprocessed_data.min():.3f} - {st.session_state.preprocessed_data.max():.3f}")
+                st.write(f"Preprocessed data mean: {st.session_state.preprocessed_data.mean():.3f}")
                 
                 # Calculate metrics
                 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
