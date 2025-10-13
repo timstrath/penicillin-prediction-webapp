@@ -146,6 +146,20 @@ def get_model_registry_info():
             
             models = cursor.fetchall()
             
+            # Get model inventory summary
+            cursor.execute("""
+                SELECT 
+                    COUNT(DISTINCT m.model_name) as total_models,
+                    COUNT(CASE WHEN mv.status = 'Validated' THEN 1 END) as validated_models,
+                    COUNT(CASE WHEN mv.status = 'In Development' THEN 1 END) as development_models,
+                    MAX(mv.created_at) as last_model_update
+                FROM models m
+                JOIN model_versions mv ON m.model_id = mv.model_id
+                WHERE m.model_name NOT LIKE '%Preprocessing%'
+            """)
+            
+            inventory_info = cursor.fetchone()
+            
             # Get validation information
             cursor.execute("""
                 SELECT COUNT(*) as total_validations,
@@ -159,7 +173,11 @@ def get_model_registry_info():
             return {
                 'models': models,
                 'total_validations': validation_info[0] if validation_info else 0,
-                'last_validation': validation_info[1] if validation_info else None
+                'last_validation': validation_info[1] if validation_info else None,
+                'total_models': inventory_info[0] if inventory_info else 0,
+                'validated_models': inventory_info[1] if inventory_info else 0,
+                'development_models': inventory_info[2] if inventory_info else 0,
+                'last_model_update': inventory_info[3] if inventory_info else None
             }
             
     except Exception as e:
@@ -304,6 +322,14 @@ def main():
                     st.success("• **Audit Trail**: ✅ Active")
                     st.success("• **Version Control**: ✅ Enabled")
                     
+                    # Model inventory summary
+                    st.markdown("**📋 Model Inventory Summary:**")
+                    st.info(f"• **Total Models**: {registry_info['total_models']} (ElasticNet, PLS, MLP+1D-CNN)")
+                    st.info(f"• **Validated Models**: {registry_info['validated_models']}")
+                    st.info(f"• **Models in Development**: {registry_info['development_models']}")
+                    if registry_info['last_model_update']:
+                        st.info(f"• **Last Model Update**: {registry_info['last_model_update'][:10]}")
+                    
                 else:
                     # Fallback to static information
                     st.markdown("**📋 Model Versions:**")
@@ -316,6 +342,13 @@ def main():
                     st.warning("• **Database Connection**: ⚠️ Not Connected")
                     st.info("• **Audit Trail**: 📝 Static Mode")
                     st.info("• **Version Control**: 📝 Static Mode")
+                    
+                    # Model inventory summary (static)
+                    st.markdown("**📋 Model Inventory Summary:**")
+                    st.info("• **Total Models**: 3 (ElasticNet, PLS, MLP+1D-CNN)")
+                    st.info("• **Validated Models**: 2")
+                    st.info("• **Models in Development**: 1")
+                    st.info("• **Last Model Update**: 2025-10-13")
                 
                 # Compliance status (always shown)
                 st.markdown("**🏛️ Regulatory Compliance:**")
