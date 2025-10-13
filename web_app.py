@@ -500,7 +500,7 @@ def main():
                             y=results_df['ElasticNet_Prediction'],
                             mode='markers',
                             name='ElasticNet',
-                            marker=dict(size=6, color='#ff7f0e', opacity=0.7)  # Distinctive orange
+                            marker=dict(size=6, color='#d62728', opacity=0.7)  # Dark red for better contrast
                         ))
                         
                         # Add PLS predictions
@@ -553,7 +553,7 @@ def main():
                             name='ElasticNet',
                             opacity=0.7,
                             nbinsx=15,
-                            marker_color='#ff7f0e'  # Same orange as scatter plot
+                            marker_color='#d62728'  # Dark red for better contrast
                         ))
                         fig_residuals.add_trace(go.Histogram(
                             x=pls_residuals,
@@ -594,7 +594,7 @@ def main():
                             name='ElasticNet',
                             opacity=0.7,
                             nbinsx=15,
-                            marker_color='#ff7f0e'  # Same orange as scatter plot
+                            marker_color='#d62728'  # Dark red for better contrast
                         ))
                         fig_dist.add_trace(go.Histogram(
                             x=results_df['PLS_Prediction'],
