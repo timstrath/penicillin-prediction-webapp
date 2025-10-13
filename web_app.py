@@ -240,27 +240,16 @@ def main():
             else:
                 st.error("❌ Models Not Loaded")
     
-    # Initialize tab state
-    if 'current_tab' not in st.session_state:
-        st.session_state.current_tab = 1  # Default to Results & Predictions tab
+    # Navigation using selectbox instead of tabs to avoid tab switching issues
+    st.sidebar.header("📋 Navigation")
+    page = st.sidebar.selectbox(
+        "Choose a section:",
+        ["📊 Results & Predictions", "🔬 Preprocessing", "📈 History", "⚙️ Settings"],
+        index=0  # Default to Results & Predictions
+    )
     
-    # Use query parameters to maintain tab state
-    query_params = st.query_params
-    if 'tab' in query_params:
-        try:
-            st.session_state.current_tab = int(query_params['tab'])
-        except:
-            st.session_state.current_tab = 1
-    
-    # Main tabs
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "🔬 Preprocessing", 
-        "📊 Results & Predictions", 
-        "📈 History", 
-        "⚙️ Settings"
-    ])
-    
-    with tab1:
+    # Main content based on selected page
+    if page == "🔬 Preprocessing":
         st.header("🔬 Preprocessing Visualization")
         
         if st.session_state.data is not None and st.session_state.preprocessed_data is not None:
@@ -411,11 +400,8 @@ def main():
         else:
             st.error("Data not loaded. Please check the data file.")
     
-    with tab2:
+    elif page == "📊 Results & Predictions":
         st.header("📊 Results & Predictions")
-        
-        # Add invisible element to anchor tab and prevent first-click switching
-        st.markdown("", unsafe_allow_html=True)
         
         if st.session_state.models_loaded and st.session_state.preprocessed_data is not None:
             # Prediction controls
@@ -428,10 +414,6 @@ def main():
             with col2:
                 st.write("")  # Spacing
                 if st.button("🚀 Run Predictions", type="primary"):
-                    # Ensure we stay on the Results & Predictions tab
-                    st.session_state.current_tab = 1
-                    st.query_params.tab = "1"
-                    
                     with st.spinner("Making predictions..."):
                         # Get models
                         pipeline, elastic_model, pls_model = load_models()
@@ -459,10 +441,6 @@ def main():
             with col3:
                 st.write("")  # Spacing
                 if st.button("🔄 Clear Results"):
-                    # Ensure we stay on the Results & Predictions tab
-                    st.session_state.current_tab = 1
-                    st.query_params.tab = "1"
-                    
                     st.session_state.predictions = {}
                     st.rerun()
             
@@ -589,7 +567,7 @@ def main():
         else:
             st.warning("Please load models and data first.")
     
-    with tab3:
+    elif page == "📈 History":
         st.header("📈 Prediction History")
         
         if st.session_state.prediction_history:
@@ -638,7 +616,7 @@ def main():
         else:
             st.info("No prediction history available. Run some predictions to see history here.")
     
-    with tab4:
+    elif page == "⚙️ Settings":
         st.header("⚙️ Settings")
         
         col1, col2 = st.columns(2)
