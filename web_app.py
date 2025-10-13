@@ -135,7 +135,17 @@ def preprocess_data(data, pipeline):
         # Fill ALL NaN values with 0 (same as training data)
         data_copy = data_copy.fillna(0)
         
-        # The preprocessing pipeline expects the EXACT same feature structure as training
+        # Ensure all data is numeric (convert any non-numeric columns)
+        for col in data_copy.columns:
+            if data_copy[col].dtype == 'object':
+                data_copy[col] = pd.to_numeric(data_copy[col], errors='coerce').fillna(0)
+        
+        # Ensure the data has the exact same column order as the pipeline expects
+        if hasattr(pipeline, 'feature_names_in_'):
+            # Reorder columns to match pipeline expectations
+            expected_columns = pipeline.feature_names_in_
+            data_copy = data_copy[expected_columns]
+        
         # Apply the preprocessing pipeline to the entire dataset
         preprocessed = pipeline.transform(data_copy)
         
@@ -155,6 +165,17 @@ def preprocess_data_for_visualization(data, pipeline):
         
         # Fill ALL NaN values with 0 (same as training data)
         data_copy = data_copy.fillna(0)
+        
+        # Ensure all data is numeric (convert any non-numeric columns)
+        for col in data_copy.columns:
+            if data_copy[col].dtype == 'object':
+                data_copy[col] = pd.to_numeric(data_copy[col], errors='coerce').fillna(0)
+        
+        # Ensure the data has the exact same column order as the pipeline expects
+        if hasattr(pipeline, 'feature_names_in_'):
+            # Reorder columns to match pipeline expectations
+            expected_columns = pipeline.feature_names_in_
+            data_copy = data_copy[expected_columns]
         
         # Apply preprocessing steps up to (but not including) the final StandardScaler
         # Use the same data structure as training
