@@ -309,6 +309,7 @@ def main():
                     st.markdown("**📋 Model Versions:**")
                     st.info("• **ElasticNet**: v1.2.0 (Validated)")
                     st.info("• **PLS**: v1.1.0 (Validated)")
+                    st.info("• **MLP+1D-CNN**: v1.0.0 (Validated)")
                     
                     # Model registry status
                     st.markdown("**📊 Registry Status:**")
