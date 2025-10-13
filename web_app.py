@@ -134,12 +134,13 @@ def get_model_registry_info():
         with sqlite3.connect(db_path, timeout=30) as conn:
             cursor = conn.cursor()
             
-            # Get latest model versions
+            # Get latest model versions (exclude preprocessing models)
             cursor.execute("""
                 SELECT m.model_name, mv.version_number, mv.created_at, mv.status
                 FROM models m
                 JOIN model_versions mv ON m.model_id = mv.model_id
-                WHERE mv.status = 'Validated'
+                WHERE mv.status = 'Validated' 
+                AND m.model_name NOT LIKE '%Preprocessing%'
                 ORDER BY mv.created_at DESC
             """)
             
