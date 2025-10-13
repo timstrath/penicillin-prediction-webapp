@@ -93,8 +93,8 @@ def load_data():
         file_size = os.path.getsize(data_file) if os.path.exists(data_file) else 0
         
         if os.path.exists(data_file):
-            # Load a subset for demonstration (first 1000 rows)
-            data = pd.read_csv(data_file, nrows=1000)
+            # Load exactly 100 samples for demonstration
+            data = pd.read_csv(data_file, nrows=100)
             
             # Debug: Show data info
             target_col = 'Penicillin concentration(P:g/L)'
