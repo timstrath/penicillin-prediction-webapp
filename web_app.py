@@ -923,11 +923,11 @@ def main():
             
             # Query for ElasticNet models
             cursor.execute("""
-                SELECT mv.version_number, mv.created_at, mv.status, mv.performance_metrics
+                SELECT mv.version_number, mv.created_date, mv.status, mv.performance_metrics
                 FROM models m
                 JOIN model_versions mv ON m.model_id = mv.model_id
                 WHERE m.model_name LIKE '%ElasticNet%'
-                ORDER BY mv.created_at DESC
+                ORDER BY mv.created_date DESC
             """)
             
             elasticnet_models = cursor.fetchall()
@@ -936,7 +936,7 @@ def main():
             if elasticnet_models:
                 # Create model selection options
                 model_options = []
-                for version, created_at, status, metrics in elasticnet_models:
+                for version, created_date, status, metrics in elasticnet_models:
                     # Parse metrics if available
                     try:
                         import json
@@ -947,7 +947,7 @@ def main():
                         r2_score = 'N/A'
                         rmse = 'N/A'
                     
-                    option_text = f"v{version} ({created_at[:10]}) - R²: {r2_score}, RMSE: {rmse} - {status}"
+                    option_text = f"v{version} ({created_date[:10]}) - R²: {r2_score}, RMSE: {rmse} - {status}"
                     model_options.append(option_text)
                 
                 selected_model = st.selectbox(
@@ -1260,11 +1260,11 @@ def main():
             
             # Query for PLS models
             cursor.execute("""
-                SELECT mv.version_number, mv.created_at, mv.status, mv.performance_metrics
+                SELECT mv.version_number, mv.created_date, mv.status, mv.performance_metrics
                 FROM models m
                 JOIN model_versions mv ON m.model_id = mv.model_id
                 WHERE m.model_name LIKE '%PLS%'
-                ORDER BY mv.created_at DESC
+                ORDER BY mv.created_date DESC
             """)
             
             pls_models = cursor.fetchall()
@@ -1273,7 +1273,7 @@ def main():
             if pls_models:
                 # Create model selection options
                 model_options = []
-                for version, created_at, status, metrics in pls_models:
+                for version, created_date, status, metrics in pls_models:
                     # Parse metrics if available
                     try:
                         import json
@@ -1284,7 +1284,7 @@ def main():
                         r2_score = 'N/A'
                         rmse = 'N/A'
                     
-                    option_text = f"v{version} ({created_at[:10]}) - R²: {r2_score}, RMSE: {rmse} - {status}"
+                    option_text = f"v{version} ({created_date[:10]}) - R²: {r2_score}, RMSE: {rmse} - {status}"
                     model_options.append(option_text)
                 
                 selected_pls_model = st.selectbox(
