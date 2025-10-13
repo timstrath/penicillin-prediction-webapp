@@ -11,6 +11,7 @@ import joblib
 import os
 import sqlite3
 from datetime import datetime
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 # Page configuration
 st.set_page_config(
@@ -78,10 +79,21 @@ def load_models():
         except Exception as e:
             print(f"⚠️  Error loading PLS model: {str(e)}")
         
-        return pipeline, elastic_model, pls_model
+        # Try to load MLP+1D-CNN model if available
+        mlp_cnn_model = None
+        try:
+            import tensorflow as tf
+            mlp_cnn_model = tf.keras.models.load_model(os.path.join(models_dir, "best_sqrt_hybrid_5000_samples.h5"))
+            print("✅ MLP+1D-CNN model loaded successfully!")
+        except FileNotFoundError:
+            print("⚠️  MLP+1D-CNN model not found.")
+        except Exception as e:
+            print(f"⚠️  Error loading MLP+1D-CNN model: {str(e)}")
+        
+        return pipeline, elastic_model, pls_model, mlp_cnn_model
     except Exception as e:
         st.error(f"Error loading models: {str(e)}")
-        return None, None, None
+        return None, None, None, None
 
 # @st.cache_data  # Temporarily disabled to force data reload
 def load_data():
@@ -243,6 +255,37 @@ def preprocess_data_for_visualization(data, pipeline):
         st.error(f"Error in preprocessing for visualization: {str(e)}")
         return None
 
+def prepare_mlp_cnn_data(data):
+    """Prepare data for MLP+1D-CNN model (separate process and spectral inputs)"""
+    try:
+        # Create a copy to avoid modifying the original data
+        data_copy = data.copy()
+        
+        # Fill ALL NaN values with 0
+        data_copy = data_copy.fillna(0)
+        
+        # Convert object columns to numeric, filling NaNs with 0
+        for col in data_copy.select_dtypes(include=['object']).columns:
+            data_copy[col] = pd.to_numeric(data_copy[col], errors='coerce').fillna(0)
+        
+        # Separate process and spectral data
+        # Process data: first 39 columns (based on metadata)
+        process_data = data_copy.iloc[:, :39].values
+        
+        # Spectral data: columns that look like wavelengths (numeric values)
+        numeric_cols = data_copy.select_dtypes(include=[np.number]).columns
+        spectral_cols = [col for col in numeric_cols if str(col).replace('.', '').isdigit()]
+        spectral_data = data_copy[spectral_cols].values
+        
+        # Apply square root transformation to spectral data (as per model training)
+        spectral_data = np.sqrt(np.abs(spectral_data))
+        
+        return process_data, spectral_data
+        
+    except Exception as e:
+        print(f"Error preparing MLP+1D-CNN data: {str(e)}")
+        return None, None
+
 def make_predictions(data, elastic_model, pls_model=None):
     """Make predictions using both models"""
     predictions = {}
@@ -277,7 +320,7 @@ def main():
     if st.session_state.data is None:
         with st.spinner("Loading data and models..."):
             st.session_state.data = load_data()
-            pipeline, elastic_model, pls_model = load_models()
+            pipeline, elastic_model, pls_model, mlp_cnn_model = load_models()
             st.session_state.models_loaded = (pipeline is not None and elastic_model is not None)
             
             if st.session_state.models_loaded and st.session_state.data is not None:
@@ -581,7 +624,7 @@ def main():
             if 'predictions' not in st.session_state or not st.session_state.predictions:
                 with st.spinner("Making predictions..."):
                     # Get models
-                    pipeline, elastic_model, pls_model = load_models()
+                    pipeline, elastic_model, pls_model, mlp_cnn_model = load_models()
                     
                     # Use all available data (up to 100 samples for demo)
                     num_spectra = min(100, len(st.session_state.preprocessed_data))
@@ -822,7 +865,7 @@ def main():
         
         if st.session_state.data is not None and st.session_state.models_loaded:
             # Load models
-            pipeline, elastic_model, pls_model = load_models()
+            pipeline, elastic_model, pls_model, mlp_cnn_model = load_models()
             
             if pipeline is not None and elastic_model is not None:
                 # PREPROCESSING VISUALIZATION
@@ -1076,7 +1119,7 @@ def main():
         
         if st.session_state.data is not None and st.session_state.models_loaded:
             # Load models
-            pipeline, elastic_model, pls_model = load_models()
+            pipeline, elastic_model, pls_model, mlp_cnn_model = load_models()
             
             if pipeline is not None and pls_model is not None:
                 # PREPROCESSING VISUALIZATION
@@ -1330,7 +1373,7 @@ def main():
         
         if st.session_state.data is not None and st.session_state.models_loaded:
             # Load models
-            pipeline, elastic_model, pls_model = load_models()
+            pipeline, elastic_model, pls_model, mlp_cnn_model = load_models()
             
             if pipeline is not None:
                 # PREPROCESSING VISUALIZATION
@@ -1427,60 +1470,212 @@ def main():
                 # PREDICTIONS SECTION
                 st.subheader("📊 MLP+1D-CNN Predictions")
                 
-                # Note: MLP+1D-CNN model is not yet integrated
-                st.info("🔄 **MLP+1D-CNN Model Status: In Development**")
-                st.markdown("""
-                The MLP+1D-CNN model is currently in development and not yet integrated into the prediction pipeline.
-                
-                **Model Architecture:**
-                - **MLP Component**: Multi-layer perceptron for feature learning
-                - **1D-CNN Component**: 1D convolutional neural network for spectral pattern recognition
-                - **Hybrid Approach**: Combines traditional MLP with CNN for enhanced spectral analysis
-                
-                **Expected Features:**
-                - Advanced spectral feature extraction
-                - Improved pattern recognition capabilities
-                - Enhanced prediction accuracy for complex spectral data
-                
-                **Development Status:**
-                - ✅ Model architecture designed
-                - ✅ Training pipeline implemented
-                - 🔄 Integration with web app (in progress)
-                - ⏳ Validation and testing (pending)
-                """)
-                
-                # Placeholder for future predictions
-                st.subheader("📈 Future Performance Metrics")
-                col1, col2, col3, col4 = st.columns(4)
-                
-                with col1:
-                    st.metric("RMSE", "TBD", help="To be determined after integration")
-                with col2:
-                    st.metric("MAE", "TBD", help="To be determined after integration")
-                with col3:
-                    st.metric("R² Score", "TBD", help="To be determined after integration")
-                with col4:
-                    st.metric("MSE", "TBD", help="To be determined after integration")
-                
-                # Placeholder plots
-                st.subheader("📊 Model Performance Analysis")
-                st.info("📊 Performance visualizations will be available once the model is fully integrated.")
-                
-                # Development roadmap
-                st.subheader("🚀 Development Roadmap")
-                roadmap_data = {
-                    'Phase': ['Model Training', 'Integration', 'Validation', 'Deployment'],
-                    'Status': ['✅ Complete', '🔄 In Progress', '⏳ Pending', '⏳ Pending'],
-                    'Description': [
-                        'Model architecture and training pipeline completed',
-                        'Integration with web application in progress',
-                        'Model validation and performance testing',
-                        'Production deployment and monitoring'
-                    ]
-                }
-                
-                roadmap_df = pd.DataFrame(roadmap_data)
-                st.dataframe(roadmap_df, use_container_width=True)
+                if mlp_cnn_model is not None:
+                    # Model is available - make predictions
+                    try:
+                        # Prepare data for MLP+1D-CNN
+                        process_data, spectral_data = prepare_mlp_cnn_data(st.session_state.data)
+                        
+                        if process_data is not None and spectral_data is not None:
+                            # Make predictions
+                            mlp_cnn_pred = mlp_cnn_model.predict([process_data, spectral_data]).flatten()
+                            
+                            # Apply inverse square root transformation
+                            mlp_cnn_pred = mlp_cnn_pred ** 2
+                            
+                            # Get ground truth
+                            target_col = "Penicillin concentration(P:g/L)"
+                            ground_truth = st.session_state.data[target_col].values[:len(mlp_cnn_pred)]
+                            
+                            # Calculate performance metrics
+                            mlp_cnn_rmse = np.sqrt(mean_squared_error(ground_truth, mlp_cnn_pred))
+                            mlp_cnn_mae = mean_absolute_error(ground_truth, mlp_cnn_pred)
+                            mlp_cnn_r2 = r2_score(ground_truth, mlp_cnn_pred)
+                            mlp_cnn_mse = mean_squared_error(ground_truth, mlp_cnn_pred)
+                            
+                            # Display performance metrics
+                            st.subheader("📈 Performance Metrics")
+                            col1, col2, col3, col4 = st.columns(4)
+                            
+                            with col1:
+                                st.metric("RMSE", f"{mlp_cnn_rmse:.3f} g/L")
+                            with col2:
+                                st.metric("MAE", f"{mlp_cnn_mae:.3f} g/L")
+                            with col3:
+                                st.metric("R² Score", f"{mlp_cnn_r2:.3f}")
+                            with col4:
+                                st.metric("MSE", f"{mlp_cnn_mse:.3f}")
+                            
+                            # Model Performance Analysis
+                            st.subheader("📊 Model Performance Analysis")
+                            
+                            col1, col2, col3 = st.columns(3)
+                            
+                            with col1:
+                                # Prediction vs Actual scatter plot
+                                fig1 = go.Figure()
+                                
+                                fig1.add_trace(go.Scatter(
+                                    x=ground_truth,
+                                    y=mlp_cnn_pred,
+                                    mode='markers',
+                                    name='MLP+1D-CNN Predictions',
+                                    marker=dict(color='#9467bd', size=8, opacity=0.7),
+                                    showlegend=True
+                                ))
+                                
+                                # Perfect prediction line
+                                min_val = min(min(ground_truth), min(mlp_cnn_pred))
+                                max_val = max(max(ground_truth), max(mlp_cnn_pred))
+                                fig1.add_trace(go.Scatter(
+                                    x=[min_val, max_val],
+                                    y=[min_val, max_val],
+                                    mode='lines',
+                                    name='Perfect Prediction',
+                                    line=dict(color='#1f77b4', dash='dash'),
+                                    showlegend=True
+                                ))
+                                
+                                fig1.update_layout(
+                                    title="Prediction vs Actual",
+                                    xaxis_title="Actual (g/L)",
+                                    yaxis_title="Predicted (g/L)",
+                                    height=400,
+                                    showlegend=True
+                                )
+                                
+                                st.plotly_chart(fig1, use_container_width=True, key="mlp_cnn_scatter")
+                            
+                            with col2:
+                                # Residuals distribution
+                                residuals = mlp_cnn_pred - ground_truth
+                                fig2 = go.Figure()
+                                
+                                fig2.add_trace(go.Histogram(
+                                    x=residuals,
+                                    nbinsx=20,
+                                    name='Residuals',
+                                    marker_color='#9467bd',
+                                    opacity=0.7
+                                ))
+                                
+                                fig2.update_layout(
+                                    title="Residuals Distribution",
+                                    xaxis_title="Residuals (g/L)",
+                                    yaxis_title="Frequency",
+                                    height=400,
+                                    showlegend=True
+                                )
+                                
+                                st.plotly_chart(fig2, use_container_width=True, key="mlp_cnn_residuals")
+                            
+                            with col3:
+                                # Concentration distribution
+                                fig3 = go.Figure()
+                                
+                                # Add actual concentration distribution
+                                fig3.add_trace(go.Histogram(
+                                    x=ground_truth,
+                                    nbinsx=20,
+                                    name='Actual Concentrations',
+                                    marker_color='#2ca02c',
+                                    opacity=0.7
+                                ))
+                                
+                                # Add predicted concentration distribution
+                                fig3.add_trace(go.Histogram(
+                                    x=mlp_cnn_pred,
+                                    nbinsx=20,
+                                    name='Predicted Concentrations',
+                                    marker_color='#9467bd',
+                                    opacity=0.7
+                                ))
+                                
+                                fig3.update_layout(
+                                    title="Concentration Distribution",
+                                    xaxis_title="Penicillin Concentration (g/L)",
+                                    yaxis_title="Frequency",
+                                    height=400,
+                                    showlegend=True
+                                )
+                                
+                                st.plotly_chart(fig3, use_container_width=True, key="mlp_cnn_distribution")
+                            
+                            # Prediction Results Table
+                            st.subheader("📈 Prediction Results")
+                            
+                            # Create results DataFrame
+                            results_df = pd.DataFrame({
+                                'Sample': range(1, len(mlp_cnn_pred) + 1),
+                                'Actual (g/L)': ground_truth,
+                                'MLP+1D-CNN Predicted (g/L)': mlp_cnn_pred,
+                                'Residual (g/L)': mlp_cnn_pred - ground_truth,
+                                'Absolute Error (g/L)': np.abs(mlp_cnn_pred - ground_truth)
+                            })
+                            
+                            st.dataframe(results_df, use_container_width=True)
+                            
+                        else:
+                            st.error("Error preparing data for MLP+1D-CNN model.")
+                            
+                    except Exception as e:
+                        st.error(f"Error making MLP+1D-CNN predictions: {str(e)}")
+                        st.info("🔄 **MLP+1D-CNN Model Status: Error in Prediction**")
+                else:
+                    # Model not available
+                    st.info("🔄 **MLP+1D-CNN Model Status: In Development**")
+                    st.markdown("""
+                    The MLP+1D-CNN model is currently in development and not yet integrated into the prediction pipeline.
+                    
+                    **Model Architecture:**
+                    - **MLP Component**: Multi-layer perceptron for feature learning
+                    - **1D-CNN Component**: 1D convolutional neural network for spectral pattern recognition
+                    - **Hybrid Approach**: Combines traditional MLP with CNN for enhanced spectral analysis
+                    
+                    **Expected Features:**
+                    - Advanced spectral feature extraction
+                    - Improved pattern recognition capabilities
+                    - Enhanced prediction accuracy for complex spectral data
+                    
+                    **Development Status:**
+                    - ✅ Model architecture designed
+                    - ✅ Training pipeline implemented
+                    - 🔄 Integration with web app (in progress)
+                    - ⏳ Validation and testing (pending)
+                    """)
+                    
+                    # Placeholder for future predictions
+                    st.subheader("📈 Future Performance Metrics")
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        st.metric("RMSE", "TBD", help="To be determined after integration")
+                    with col2:
+                        st.metric("MAE", "TBD", help="To be determined after integration")
+                    with col3:
+                        st.metric("R² Score", "TBD", help="To be determined after integration")
+                    with col4:
+                        st.metric("MSE", "TBD", help="To be determined after integration")
+                    
+                    # Placeholder plots
+                    st.subheader("📊 Model Performance Analysis")
+                    st.info("📊 Performance visualizations will be available once the model is fully integrated.")
+                    
+                    # Development roadmap
+                    st.subheader("🚀 Development Roadmap")
+                    roadmap_data = {
+                        'Phase': ['Model Training', 'Integration', 'Validation', 'Deployment'],
+                        'Status': ['✅ Complete', '🔄 In Progress', '⏳ Pending', '⏳ Pending'],
+                        'Description': [
+                            'Model architecture and training pipeline completed',
+                            'Integration with web application in progress',
+                            'Model validation and performance testing',
+                            'Production deployment and monitoring'
+                        ]
+                    }
+                    
+                    roadmap_df = pd.DataFrame(roadmap_data)
+                    st.dataframe(roadmap_df, use_container_width=True)
                 
             else:
                 st.error("Preprocessing pipeline not available.")
@@ -1546,7 +1741,7 @@ def main():
             
             # Display current model info
             if st.session_state.models_loaded:
-                pipeline, elastic_model, pls_model = load_models()
+                pipeline, elastic_model, pls_model, mlp_cnn_model = load_models()
                 
                 st.write("**ElasticNet Parameters:**")
                 st.write(f"- Alpha: {getattr(elastic_model, 'alpha', 'N/A')}")
