@@ -489,6 +489,13 @@ def main():
                 # Calculate metrics
                 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
                 
+                # Debug: Show prediction ranges
+                st.write("🔍 **Debug - Prediction Ranges:**")
+                st.write(f"ElasticNet predictions: {elasticnet_pred.min():.3f} - {elasticnet_pred.max():.3f}")
+                if pls_pred is not None:
+                    st.write(f"PLS predictions: {pls_pred.min():.3f} - {pls_pred.max():.3f}")
+                st.write(f"Ground truth: {ground_truth.min():.3f} - {ground_truth.max():.3f}")
+                
                 elasticnet_mse = mean_squared_error(ground_truth, elasticnet_pred)
                 elasticnet_mae = mean_absolute_error(ground_truth, elasticnet_pred)
                 elasticnet_r2 = r2_score(ground_truth, elasticnet_pred)
@@ -499,6 +506,12 @@ def main():
                     pls_mae = mean_absolute_error(ground_truth, pls_pred)
                     pls_r2 = r2_score(ground_truth, pls_pred)
                     pls_rmse = np.sqrt(pls_mse)
+                
+                # Debug: Show calculated metrics
+                st.write("🔍 **Debug - Calculated Metrics:**")
+                st.write(f"ElasticNet: RMSE={elasticnet_rmse:.3f}, MAE={elasticnet_mae:.3f}, R²={elasticnet_r2:.3f}")
+                if pls_pred is not None:
+                    st.write(f"PLS: RMSE={pls_rmse:.3f}, MAE={pls_mae:.3f}, R²={pls_r2:.3f}")
                 
                 # Performance metrics table
                 col1, col2 = st.columns(2)
