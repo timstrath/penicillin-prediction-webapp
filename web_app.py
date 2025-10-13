@@ -87,8 +87,28 @@ def load_models():
             print(f"🔍 Attempting to load MLP+1D-CNN model from: {model_path}")
             print(f"🔍 Model file exists: {os.path.exists(model_path)}")
             if os.path.exists(model_path):
-                mlp_cnn_model = tf.keras.models.load_model(model_path)
-                print("✅ MLP+1D-CNN model loaded successfully!")
+                # Try loading with custom objects to handle version compatibility
+                try:
+                    mlp_cnn_model = tf.keras.models.load_model(
+                        model_path, 
+                        custom_objects={
+                            'mse': tf.keras.metrics.mean_squared_error,
+                            'mae': tf.keras.metrics.mean_absolute_error,
+                            'mean_squared_error': tf.keras.metrics.mean_squared_error,
+                            'mean_absolute_error': tf.keras.metrics.mean_absolute_error,
+                        },
+                        compile=False  # Don't compile to avoid metric issues
+                    )
+                    print("✅ MLP+1D-CNN model loaded successfully!")
+                except Exception as load_error:
+                    print(f"⚠️  Model loading failed with custom objects: {str(load_error)}")
+                    # Try loading without compilation
+                    try:
+                        mlp_cnn_model = tf.keras.models.load_model(model_path, compile=False)
+                        print("✅ MLP+1D-CNN model loaded successfully (without compilation)!")
+                    except Exception as simple_error:
+                        print(f"⚠️  Simple model loading also failed: {str(simple_error)}")
+                        raise simple_error
             else:
                 print("⚠️  MLP+1D-CNN model file not found at expected path.")
         except ImportError as e:
