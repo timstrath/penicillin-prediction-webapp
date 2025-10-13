@@ -170,6 +170,10 @@ def make_predictions(data, elastic_model, pls_model=None):
 
 # Main app
 def main():
+    # Ensure session state is properly initialized
+    if 'preprocessed_data_viz' not in st.session_state:
+        st.session_state.preprocessed_data_viz = None
+    
     # Header
     st.markdown('<h1 class="main-header">🧪 Penicillin Concentration Prediction Dashboard</h1>', unsafe_allow_html=True)
     st.markdown('<p style="text-align: center; color: #666; font-size: 0.9em;">Updated with curated test data for optimal prediction results</p>', unsafe_allow_html=True)
@@ -317,11 +321,14 @@ def main():
                 st.subheader("Preprocessed Spectra")
                 
                 # Plot preprocessed spectra (before final StandardScaler for dramatic visualization)
-                if hasattr(st.session_state, 'preprocessed_data_viz') and st.session_state.preprocessed_data_viz is not None:
+                if 'preprocessed_data_viz' in st.session_state and st.session_state.preprocessed_data_viz is not None:
                     preprocessed_spectra = st.session_state.preprocessed_data_viz[:20]
-                else:
+                elif 'preprocessed_data' in st.session_state and st.session_state.preprocessed_data is not None:
                     # Fallback to regular preprocessed data if visualization data not available
                     preprocessed_spectra = st.session_state.preprocessed_data[:20]
+                else:
+                    st.warning("No preprocessed data available for visualization")
+                    continue
                 
                 # Use the same wavelength range as raw data (350-1750 cm⁻¹)
                 preprocessed_wavelengths = wavelengths
