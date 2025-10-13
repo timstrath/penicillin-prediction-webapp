@@ -469,53 +469,6 @@ def main():
                 
                 results_df = pd.DataFrame(results_data)
                 
-                # Model Performance Comparison
-                st.subheader("📊 Model Performance Comparison")
-                
-                # Calculate performance metrics (using predictions as "true" values for demonstration)
-                # In a real scenario, you'd have actual ground truth values
-                elasticnet_pred = results_df['ElasticNet_Prediction'].values
-                pls_pred = results_df['PLS_Prediction'].values if st.session_state.predictions['pls'] is not None else None
-                
-                # Use the real target values from the test data as ground truth
-                target_col = 'Penicillin concentration(P:g/L)'
-                # Slice ground truth to match the number of predictions made
-                ground_truth = st.session_state.data[target_col].values[:len(elasticnet_pred)]
-                
-                
-                # Calculate metrics
-                from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-                
-                elasticnet_mse = mean_squared_error(ground_truth, elasticnet_pred)
-                elasticnet_mae = mean_absolute_error(ground_truth, elasticnet_pred)
-                elasticnet_r2 = r2_score(ground_truth, elasticnet_pred)
-                elasticnet_rmse = np.sqrt(elasticnet_mse)
-                
-                if pls_pred is not None:
-                    pls_mse = mean_squared_error(ground_truth, pls_pred)
-                    pls_mae = mean_absolute_error(ground_truth, pls_pred)
-                    pls_r2 = r2_score(ground_truth, pls_pred)
-                    pls_rmse = np.sqrt(pls_mse)
-                
-                # Performance metrics table
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    st.subheader("🔵 ElasticNet Performance")
-                    st.metric("RMSE", f"{elasticnet_rmse:.3f} g/L")
-                    st.metric("MAE", f"{elasticnet_mae:.3f} g/L")
-                    st.metric("R² Score", f"{elasticnet_r2:.3f}")
-                    st.metric("MSE", f"{elasticnet_mse:.3f}")
-                
-                if pls_pred is not None:
-                    with col2:
-                        st.subheader("🟢 PLS Performance")
-                        st.metric("RMSE", f"{pls_rmse:.3f} g/L")
-                        st.metric("MAE", f"{pls_mae:.3f} g/L")
-                        st.metric("R² Score", f"{pls_r2:.3f}")
-                        st.metric("MSE", f"{pls_mse:.3f}")
-                
-                
                 # 1. MODEL COMPARISON PLOTS (TOP)
                 if st.session_state.predictions['pls'] is not None:
                     st.subheader("📊 Model Comparison")
@@ -604,6 +557,50 @@ def main():
                 
                 # 2. MODEL PERFORMANCE COMPARISON (MIDDLE)
                 st.subheader("📊 Model Performance Comparison")
+                
+                # Calculate performance metrics (using predictions as "true" values for demonstration)
+                # In a real scenario, you'd have actual ground truth values
+                elasticnet_pred = results_df['ElasticNet_Prediction'].values
+                pls_pred = results_df['PLS_Prediction'].values if st.session_state.predictions['pls'] is not None else None
+                
+                # Use the real target values from the test data as ground truth
+                target_col = 'Penicillin concentration(P:g/L)'
+                # Slice ground truth to match the number of predictions made
+                ground_truth = st.session_state.data[target_col].values[:len(elasticnet_pred)]
+                
+                
+                # Calculate metrics
+                from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+                
+                elasticnet_mse = mean_squared_error(ground_truth, elasticnet_pred)
+                elasticnet_mae = mean_absolute_error(ground_truth, elasticnet_pred)
+                elasticnet_r2 = r2_score(ground_truth, elasticnet_pred)
+                elasticnet_rmse = np.sqrt(elasticnet_mse)
+                
+                if pls_pred is not None:
+                    pls_mse = mean_squared_error(ground_truth, pls_pred)
+                    pls_mae = mean_absolute_error(ground_truth, pls_pred)
+                    pls_r2 = r2_score(ground_truth, pls_pred)
+                    pls_rmse = np.sqrt(pls_mse)
+                
+                # Performance metrics table
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.subheader("🔵 ElasticNet Performance")
+                    st.metric("RMSE", f"{elasticnet_rmse:.3f} g/L")
+                    st.metric("MAE", f"{elasticnet_mae:.3f} g/L")
+                    st.metric("R² Score", f"{elasticnet_r2:.3f}")
+                    st.metric("MSE", f"{elasticnet_mse:.3f}")
+                
+                if pls_pred is not None:
+                    with col2:
+                        st.subheader("🟢 PLS Performance")
+                        st.metric("RMSE", f"{pls_rmse:.3f} g/L")
+                        st.metric("MAE", f"{pls_mae:.3f} g/L")
+                        st.metric("R² Score", f"{pls_r2:.3f}")
+                        st.metric("MSE", f"{pls_mse:.3f}")
+                
                 
                 # 3. PREDICTION TABLE (BOTTOM)
                 st.subheader("📈 Prediction Results")
