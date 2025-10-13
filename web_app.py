@@ -482,9 +482,9 @@ def main():
                 elasticnet_pred = results_df['ElasticNet_Prediction'].values
                 pls_pred = results_df['PLS_Prediction'].values if st.session_state.predictions['pls'] is not None else None
                 
-                # For demonstration, we'll use the mean of both predictions as "ground truth"
-                # This is just for showing the comparison methodology
-                ground_truth = (elasticnet_pred + pls_pred) / 2 if pls_pred is not None else elasticnet_pred
+                # Use the real target values from the test data as ground truth
+                target_col = 'Penicillin concentration(P:g/L)'
+                ground_truth = data[target_col].values
                 
                 # Calculate metrics
                 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
@@ -652,8 +652,9 @@ def main():
                         # Plot 2: Prediction vs Actual Values (NEW - in the middle)
                         st.subheader("🎯 Prediction vs Actual")
                         
-                        # For demonstration, we'll use the mean of both predictions as "actual" values
-                        actual_values = (results_df['ElasticNet_Prediction'] + results_df['PLS_Prediction']) / 2
+                        # Use the real target values from the test data
+                        target_col = 'Penicillin concentration(P:g/L)'
+                        actual_values = data[target_col].values
                         
                         fig_actual = go.Figure()
                         
