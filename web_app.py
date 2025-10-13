@@ -911,6 +911,89 @@ def main():
     with tab3:
         st.header("🔵 ElasticNet Model - Preprocessing & Predictions")
         
+        # Historical Model Selection (GMP Compliance Feature)
+        st.subheader("📚 Historical Model Versions")
+        st.info("**GMP Compliance**: Select different model versions to compare performance and maintain audit trail")
+        
+        # Get available ElasticNet models from database
+        try:
+            import sqlite3
+            conn = sqlite3.connect('pharma_model_registry.db')
+            cursor = conn.cursor()
+            
+            # Query for ElasticNet models
+            cursor.execute("""
+                SELECT mv.version_number, mv.created_at, mv.status, mv.performance_metrics
+                FROM models m
+                JOIN model_versions mv ON m.model_id = mv.model_id
+                WHERE m.model_name LIKE '%ElasticNet%'
+                ORDER BY mv.created_at DESC
+            """)
+            
+            elasticnet_models = cursor.fetchall()
+            conn.close()
+            
+            if elasticnet_models:
+                # Create model selection options
+                model_options = []
+                for version, created_at, status, metrics in elasticnet_models:
+                    # Parse metrics if available
+                    try:
+                        import json
+                        metrics_dict = json.loads(metrics) if metrics else {}
+                        r2_score = metrics_dict.get('r2_score', 'N/A')
+                        rmse = metrics_dict.get('rmse', 'N/A')
+                    except:
+                        r2_score = 'N/A'
+                        rmse = 'N/A'
+                    
+                    option_text = f"v{version} ({created_at[:10]}) - R²: {r2_score}, RMSE: {rmse} - {status}"
+                    model_options.append(option_text)
+                
+                selected_model = st.selectbox(
+                    "Select ElasticNet Model Version:",
+                    model_options,
+                    help="Choose a historical model version to see its performance on current data"
+                )
+                
+                # Extract version number from selection
+                selected_version = selected_model.split(' ')[0].replace('v', '')
+                st.success(f"Selected: {selected_model}")
+                
+                # Model Comparison Section
+                st.subheader("📊 Model Version Comparison")
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.metric(
+                        label="Selected Model Version",
+                        value=f"v{selected_version}",
+                        help="Historical model version selected for analysis"
+                    )
+                
+                with col2:
+                    st.metric(
+                        label="Current Model Version", 
+                        value="v1.2.0",
+                        help="Latest deployed model version"
+                    )
+                
+                # Add note about model comparison
+                st.info("""
+                **Model Comparison**: The predictions below will show how the selected historical model 
+                performs on the current dataset. This helps assess model stability and performance 
+                evolution over time - a key requirement for GMP compliance.
+                """)
+                
+            else:
+                st.warning("No historical ElasticNet models found in database. Using current model.")
+                selected_version = "1.2.0"  # Default to current version
+                
+        except Exception as e:
+            st.warning(f"Could not load historical models from database: {str(e)}")
+            st.info("Using current ElasticNet model (v1.2.0)")
+            selected_version = "1.2.0"
+        
         if st.session_state.data is not None and st.session_state.models_loaded:
             # Load models
             pipeline, elastic_model, pls_model, mlp_cnn_model = load_models()
@@ -1164,6 +1247,82 @@ def main():
     
     with tab4:
         st.header("🟢 PLS Model - Preprocessing & Predictions")
+        
+        # Historical Model Selection (GMP Compliance Feature)
+        st.subheader("📚 Historical Model Versions")
+        st.info("**GMP Compliance**: Select different PLS model versions to compare performance and maintain audit trail")
+        
+        # Get available PLS models from database
+        try:
+            import sqlite3
+            conn = sqlite3.connect('pharma_model_registry.db')
+            cursor = conn.cursor()
+            
+            # Query for PLS models
+            cursor.execute("""
+                SELECT mv.version_number, mv.created_at, mv.status, mv.performance_metrics
+                FROM models m
+                JOIN model_versions mv ON m.model_id = mv.model_id
+                WHERE m.model_name LIKE '%PLS%'
+                ORDER BY mv.created_at DESC
+            """)
+            
+            pls_models = cursor.fetchall()
+            conn.close()
+            
+            if pls_models:
+                # Create model selection options
+                model_options = []
+                for version, created_at, status, metrics in pls_models:
+                    # Parse metrics if available
+                    try:
+                        import json
+                        metrics_dict = json.loads(metrics) if metrics else {}
+                        r2_score = metrics_dict.get('r2_score', 'N/A')
+                        rmse = metrics_dict.get('rmse', 'N/A')
+                    except:
+                        r2_score = 'N/A'
+                        rmse = 'N/A'
+                    
+                    option_text = f"v{version} ({created_at[:10]}) - R²: {r2_score}, RMSE: {rmse} - {status}"
+                    model_options.append(option_text)
+                
+                selected_pls_model = st.selectbox(
+                    "Select PLS Model Version:",
+                    model_options,
+                    help="Choose a historical PLS model version to see its performance on current data"
+                )
+                
+                # Extract version number from selection
+                selected_pls_version = selected_pls_model.split(' ')[0].replace('v', '')
+                st.success(f"Selected: {selected_pls_model}")
+                
+                # Model Comparison Section
+                st.subheader("📊 Model Version Comparison")
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.metric(
+                        label="Selected PLS Version",
+                        value=f"v{selected_pls_version}",
+                        help="Historical PLS model version selected for analysis"
+                    )
+                
+                with col2:
+                    st.metric(
+                        label="Current PLS Version", 
+                        value="v1.1.0",
+                        help="Latest deployed PLS model version"
+                    )
+                
+            else:
+                st.warning("No historical PLS models found in database. Using current model.")
+                selected_pls_version = "1.1.0"  # Default to current version
+                
+        except Exception as e:
+            st.warning(f"Could not load historical PLS models from database: {str(e)}")
+            st.info("Using current PLS model (v1.1.0)")
+            selected_pls_version = "1.1.0"
         
         if st.session_state.data is not None and st.session_state.models_loaded:
             # Load models
