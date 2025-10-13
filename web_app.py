@@ -240,6 +240,18 @@ def main():
             else:
                 st.error("❌ Models Not Loaded")
     
+    # Initialize tab state
+    if 'current_tab' not in st.session_state:
+        st.session_state.current_tab = 1  # Default to Results & Predictions tab
+    
+    # Use query parameters to maintain tab state
+    query_params = st.query_params
+    if 'tab' in query_params:
+        try:
+            st.session_state.current_tab = int(query_params['tab'])
+        except:
+            st.session_state.current_tab = 1
+    
     # Main tabs
     tab1, tab2, tab3, tab4 = st.tabs([
         "🔬 Preprocessing", 
@@ -416,6 +428,10 @@ def main():
             with col2:
                 st.write("")  # Spacing
                 if st.button("🚀 Run Predictions", type="primary"):
+                    # Ensure we stay on the Results & Predictions tab
+                    st.session_state.current_tab = 1
+                    st.query_params.tab = "1"
+                    
                     with st.spinner("Making predictions..."):
                         # Get models
                         pipeline, elastic_model, pls_model = load_models()
@@ -443,6 +459,10 @@ def main():
             with col3:
                 st.write("")  # Spacing
                 if st.button("🔄 Clear Results"):
+                    # Ensure we stay on the Results & Predictions tab
+                    st.session_state.current_tab = 1
+                    st.query_params.tab = "1"
+                    
                     st.session_state.predictions = {}
                     st.rerun()
             
