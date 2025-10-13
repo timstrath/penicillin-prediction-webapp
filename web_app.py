@@ -284,8 +284,8 @@ def preprocess_data_for_visualization(data, pipeline):
         st.error(f"Error in preprocessing for visualization: {str(e)}")
         return None
 
-def prepare_mlp_cnn_data(data):
-    """Prepare data for MLP+1D-CNN model (separate process and spectral inputs)"""
+def prepare_mlp_cnn_data(data, pipeline):
+    """Prepare data for MLP+1D-CNN model using the same preprocessing pipeline"""
     try:
         # Create a copy to avoid modifying the original data
         data_copy = data.copy()
@@ -297,17 +297,24 @@ def prepare_mlp_cnn_data(data):
         for col in data_copy.select_dtypes(include=['object']).columns:
             data_copy[col] = pd.to_numeric(data_copy[col], errors='coerce').fillna(0)
         
-        # Separate process and spectral data
+        # Ensure the data has the exact same column order as the pipeline expects
+        if hasattr(pipeline, 'feature_names_in_'):
+            # Reorder columns to match pipeline expectations
+            expected_columns = pipeline.feature_names_in_
+            data_copy = data_copy[expected_columns]
+        
+        # Apply the same preprocessing pipeline as other models
+        preprocessed_data = pipeline.transform(data_copy)
+        
+        # Separate process and spectral data from preprocessed data
         # Process data: first 39 columns (based on metadata)
-        process_data = data_copy.iloc[:, :39].values
+        process_data = preprocessed_data[:, :39]
         
-        # Spectral data: columns that look like wavelengths (numeric values)
-        numeric_cols = data_copy.select_dtypes(include=[np.number]).columns
-        spectral_cols = [col for col in numeric_cols if str(col).replace('.', '').isdigit()]
-        spectral_data = data_copy[spectral_cols].values
+        # Spectral data: remaining columns (should be 2200 based on metadata)
+        spectral_data = preprocessed_data[:, 39:39+2200]
         
-        # Apply square root transformation to spectral data (as per model training)
-        spectral_data = np.sqrt(np.abs(spectral_data))
+        # Reshape spectral data for CNN input (add channel dimension)
+        spectral_data = spectral_data.reshape(spectral_data.shape[0], spectral_data.shape[1], 1)
         
         return process_data, spectral_data
         
@@ -1728,7 +1735,7 @@ def main():
                     st.success("✅ MLP+1D-CNN model loaded successfully!")
                     try:
                         # Prepare data for MLP+1D-CNN
-                        process_data, spectral_data = prepare_mlp_cnn_data(st.session_state.data)
+                        process_data, spectral_data = prepare_mlp_cnn_data(st.session_state.data, pipeline)
                         
                         if process_data is not None and spectral_data is not None:
                             st.info(f"📊 Data prepared: Process data shape: {process_data.shape}, Spectral data shape: {spectral_data.shape}")
