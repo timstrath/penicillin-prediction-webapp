@@ -310,8 +310,20 @@ def prepare_mlp_cnn_data(data, pipeline):
         # Process data: first 39 columns (based on metadata)
         process_data = preprocessed_data[:, :39]
         
-        # Spectral data: remaining columns (should be 2200 based on metadata)
-        spectral_data = preprocessed_data[:, 39:39+2200]
+        # Spectral data: remaining columns (use actual shape, not expected 2200)
+        spectral_data = preprocessed_data[:, 39:]
+        
+        # Check if we need to pad or truncate to match model expectations
+        expected_spectral_dim = 2200
+        actual_spectral_dim = spectral_data.shape[1]
+        
+        if actual_spectral_dim < expected_spectral_dim:
+            # Pad with zeros if we have fewer features
+            padding = np.zeros((spectral_data.shape[0], expected_spectral_dim - actual_spectral_dim))
+            spectral_data = np.concatenate([spectral_data, padding], axis=1)
+        elif actual_spectral_dim > expected_spectral_dim:
+            # Truncate if we have more features
+            spectral_data = spectral_data[:, :expected_spectral_dim]
         
         # Reshape spectral data for CNN input (add channel dimension)
         spectral_data = spectral_data.reshape(spectral_data.shape[0], spectral_data.shape[1], 1)
