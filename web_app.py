@@ -310,6 +310,7 @@ def main():
                 st.subheader("Raw Raman Spectra")
                 
                 # Find spectral columns (numeric columns that represent wavelengths)
+                # Note: First 39 columns are process data, Raman spectral data starts from column 40+
                 numeric_cols = st.session_state.data.select_dtypes(include=[np.number]).columns
                 # Filter for columns that look like wavelengths (numeric values)
                 spectral_cols = [col for col in numeric_cols if str(col).replace('.', '').isdigit()]
@@ -327,7 +328,15 @@ def main():
                         wavelengths = wavelengths[sort_indices]
                         raw_spectra = raw_spectra.iloc[:, sort_indices]
                         
-                        # NO RANGECUT - Show the full raw spectral range
+                        # Apply RangeCut to show only relevant Raman spectral range (350-1750 cm⁻¹)
+                        start_idx = np.where(wavelengths >= 350)[0]
+                        end_idx = np.where(wavelengths <= 1750)[0]
+                        
+                        if len(start_idx) > 0 and len(end_idx) > 0:
+                            start_idx = start_idx[0]
+                            end_idx = end_idx[-1] + 1
+                            wavelengths = wavelengths[start_idx:end_idx]
+                            raw_spectra = raw_spectra.iloc[:, start_idx:end_idx]
                         
                     except ValueError:
                         # If conversion fails, use the RangeCut range
@@ -377,7 +386,7 @@ def main():
                         break
                 
                     fig_raw.update_layout(
-                        title="Raw Raman Spectra (First 10) - Full Range",
+                        title="Raw Raman Spectra (First 10) - 350-1750 cm⁻¹",
                         xaxis_title="Wavelength (cm⁻¹)",
                         yaxis_title="Intensity (Raw)",
                         height=400,
