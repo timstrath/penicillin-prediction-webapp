@@ -469,6 +469,15 @@ def main():
                 
                 results_df = pd.DataFrame(results_data)
                 
+                # Calculate performance metrics first (needed for plots)
+                elasticnet_pred = results_df['ElasticNet_Prediction'].values
+                pls_pred = results_df['PLS_Prediction'].values if st.session_state.predictions['pls'] is not None else None
+                
+                # Use the real target values from the test data as ground truth
+                target_col = 'Penicillin concentration(P:g/L)'
+                # Slice ground truth to match the number of predictions made
+                ground_truth = st.session_state.data[target_col].values[:len(elasticnet_pred)]
+                
                 # 1. MODEL COMPARISON PLOTS (TOP)
                 if st.session_state.predictions['pls'] is not None:
                     st.subheader("📊 Model Comparison")
@@ -481,7 +490,6 @@ def main():
                         st.subheader("🎯 Prediction vs Actual")
                         
                         # Use the real target values from the test data
-                        target_col = 'Penicillin concentration(P:g/L)'
                         actual_values = st.session_state.data[target_col].values[:len(elasticnet_pred)]
                         
                         fig_actual = go.Figure()
@@ -557,16 +565,6 @@ def main():
                 
                 # 2. MODEL PERFORMANCE COMPARISON (MIDDLE)
                 st.subheader("📊 Model Performance Comparison")
-                
-                # Calculate performance metrics (using predictions as "true" values for demonstration)
-                # In a real scenario, you'd have actual ground truth values
-                elasticnet_pred = results_df['ElasticNet_Prediction'].values
-                pls_pred = results_df['PLS_Prediction'].values if st.session_state.predictions['pls'] is not None else None
-                
-                # Use the real target values from the test data as ground truth
-                target_col = 'Penicillin concentration(P:g/L)'
-                # Slice ground truth to match the number of predictions made
-                ground_truth = st.session_state.data[target_col].values[:len(elasticnet_pred)]
                 
                 
                 # Calculate metrics
