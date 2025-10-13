@@ -326,7 +326,7 @@ def main():
                     st.markdown("**📋 Model Inventory Summary:**")
                     st.info(f"• **Total Models**: {registry_info['total_models']} (ElasticNet, PLS, MLP+1D-CNN)")
                     st.info(f"• **Validated Models**: {registry_info['validated_models']}")
-                    st.info(f"• **Models in Development**: {registry_info['development_models']}")
+                    st.warning(f"• **Models in Development**: {registry_info['development_models']}")
                     if registry_info['last_model_update']:
                         st.info(f"• **Last Model Update**: {registry_info['last_model_update'][:10]}")
                     
@@ -347,7 +347,7 @@ def main():
                     st.markdown("**📋 Model Inventory Summary:**")
                     st.info("• **Total Models**: 3 (ElasticNet, PLS, MLP+1D-CNN)")
                     st.info("• **Validated Models**: 2")
-                    st.info("• **Models in Development**: 1")
+                    st.warning("• **Models in Development**: 1")
                     st.info("• **Last Model Update**: 2025-10-13")
                 
                 # Compliance status (always shown)
