@@ -298,9 +298,9 @@ def main():
                     if registry_info['last_validation']:
                         st.info(f"• **Last Validation**: {registry_info['last_validation'][:10]}")
                     
-                    # Model registry status
-                    st.markdown("**📊 Registry Status:**")
-                    st.success("• **Model Registry**: ✅ Connected")
+                    # Model registry database status
+                    st.markdown("**📊 Model Registry Database Status:**")
+                    st.success("• **Database Connection**: ✅ Connected")
                     st.success("• **Audit Trail**: ✅ Active")
                     st.success("• **Version Control**: ✅ Enabled")
                     
@@ -311,9 +311,9 @@ def main():
                     st.info("• **PLS**: v1.1.0 (Validated)")
                     st.info("• **MLP+1D-CNN**: v1.0.0 (In Development)")
                     
-                    # Model registry status
-                    st.markdown("**📊 Registry Status:**")
-                    st.warning("• **Model Registry**: ⚠️ Not Connected")
+                    # Model registry database status
+                    st.markdown("**📊 Model Registry Database Status:**")
+                    st.warning("• **Database Connection**: ⚠️ Not Connected")
                     st.info("• **Audit Trail**: 📝 Static Mode")
                     st.info("• **Version Control**: 📝 Static Mode")
                 
