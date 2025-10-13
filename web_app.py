@@ -1292,7 +1292,7 @@ def main():
                             x=pls_pred,
                             nbinsx=20,
                             name='Predicted Concentrations',
-                            marker_color='#2ca02c',
+                            marker_color='#ff7f0e',
                             opacity=0.7
                         ))
                         
