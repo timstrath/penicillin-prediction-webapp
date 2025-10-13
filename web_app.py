@@ -455,45 +455,37 @@ def main():
         st.header("📊 Results & Predictions")
         
         if st.session_state.models_loaded and st.session_state.preprocessed_data is not None:
-            # Prediction controls
-            col1, col2, col3 = st.columns([2, 1, 1])
-            
-            with col1:
-                st.subheader("Batch Prediction")
-                num_spectra = st.slider("Number of spectra to predict", 10, min(500, len(st.session_state.preprocessed_data)), 100)
-            
-            with col2:
-                st.write("")  # Spacing
-                if st.button("🚀 Run Predictions", type="primary"):
-                    with st.spinner("Making predictions..."):
-                        # Get models
-                        pipeline, elastic_model, pls_model = load_models()
+            # Auto-run predictions when tab is activated
+            if 'predictions' not in st.session_state or not st.session_state.predictions:
+                with st.spinner("Making predictions..."):
+                    # Get models
+                    pipeline, elastic_model, pls_model = load_models()
+                    
+                    # Use all available data (up to 100 samples for demo)
+                    num_spectra = min(100, len(st.session_state.preprocessed_data))
+                    subset_data = st.session_state.preprocessed_data[:num_spectra]
+                    
+                    # Make predictions
+                    predictions = make_predictions(subset_data, elastic_model, pls_model)
+                    
+                    if predictions:
+                        st.session_state.predictions = predictions
                         
-                        # Select subset of data
-                        subset_data = st.session_state.preprocessed_data[:num_spectra]
+                        # Store in history
+                        history_entry = {
+                            'timestamp': datetime.now(),
+                            'num_spectra': num_spectra,
+                            'elasticnet_rmse': np.sqrt(np.mean((predictions['elasticnet'] - predictions['elasticnet'])**2)) if predictions['elasticnet'] is not None else None,
+                            'pls_rmse': np.sqrt(np.mean((predictions['pls'] - predictions['pls'])**2)) if predictions['pls'] is not None else None
+                        }
+                        st.session_state.prediction_history.append(history_entry)
                         
-                        # Make predictions
-                        predictions = make_predictions(subset_data, elastic_model, pls_model)
-                        
-                        if predictions:
-                            st.session_state.predictions = predictions
-                            
-                            # Store in history
-                            history_entry = {
-                                'timestamp': datetime.now(),
-                                'num_spectra': num_spectra,
-                                'elasticnet_rmse': np.sqrt(np.mean((predictions['elasticnet'] - predictions['elasticnet'])**2)) if predictions['elasticnet'] is not None else None,
-                                'pls_rmse': np.sqrt(np.mean((predictions['pls'] - predictions['pls'])**2)) if predictions['pls'] is not None else None
-                            }
-                            st.session_state.prediction_history.append(history_entry)
-                            
-                            st.success(f"✅ Predictions completed for {num_spectra} spectra!")
+                        st.success(f"✅ Predictions completed for {num_spectra} spectra!")
             
-            with col3:
-                st.write("")  # Spacing
-                if st.button("🔄 Clear Results"):
-                    st.session_state.predictions = {}
-                    st.rerun()
+            # Clear results button (optional)
+            if st.button("🔄 Clear Results", help="Clear current predictions and rerun"):
+                st.session_state.predictions = {}
+                st.rerun()
             
             # Display results
             if st.session_state.predictions:
