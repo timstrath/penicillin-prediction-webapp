@@ -1696,13 +1696,16 @@ def main():
                 
                 if mlp_cnn_model is not None:
                     # Model is available - make predictions
+                    st.success("✅ MLP+1D-CNN model loaded successfully!")
                     try:
                         # Prepare data for MLP+1D-CNN
                         process_data, spectral_data = prepare_mlp_cnn_data(st.session_state.data)
                         
                         if process_data is not None and spectral_data is not None:
+                            st.info(f"📊 Data prepared: Process data shape: {process_data.shape}, Spectral data shape: {spectral_data.shape}")
                             # Make predictions
                             mlp_cnn_pred = mlp_cnn_model.predict([process_data, spectral_data]).flatten()
+                            st.info(f"🎯 Predictions generated: {len(mlp_cnn_pred)} samples")
                             
                             # Apply inverse square root transformation
                             mlp_cnn_pred = mlp_cnn_pred ** 2
@@ -1847,7 +1850,8 @@ def main():
                         st.info("🔄 **MLP+1D-CNN Model Status: Error in Prediction**")
                 else:
                     # Model not available
-                    st.info("🔄 **MLP+1D-CNN Model Status: In Development**")
+                    st.warning("⚠️ **MLP+1D-CNN Model Status: Model not loaded**")
+                    st.info("The MLP+1D-CNN model file may not be available in the models directory.")
                     st.markdown("""
                     The MLP+1D-CNN model is currently in development and not yet integrated into the prediction pipeline.
                     
