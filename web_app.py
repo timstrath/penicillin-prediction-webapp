@@ -639,6 +639,22 @@ def main():
                     pls_r2 = r2_score(ground_truth, pls_pred)
                     pls_rmse = np.sqrt(pls_mse)
                 
+                # Debug: Show data statistics to understand R² scores
+                st.write("🔍 **Debug Info:**")
+                st.write(f"**Ground Truth Range:** {ground_truth.min():.3f} - {ground_truth.max():.3f} g/L")
+                st.write(f"**Ground Truth Mean:** {ground_truth.mean():.3f} g/L")
+                st.write(f"**Ground Truth Std:** {ground_truth.std():.3f} g/L")
+                st.write(f"**ElasticNet Predictions Range:** {elasticnet_pred.min():.3f} - {elasticnet_pred.max():.3f} g/L")
+                if pls_pred is not None:
+                    st.write(f"**PLS Predictions Range:** {pls_pred.min():.3f} - {pls_pred.max():.3f} g/L")
+                
+                # Calculate variance of ground truth (needed for R² interpretation)
+                ground_truth_var = np.var(ground_truth)
+                st.write(f"**Ground Truth Variance:** {ground_truth_var:.3f}")
+                st.write(f"**ElasticNet MSE vs Variance:** {elasticnet_mse:.3f} vs {ground_truth_var:.3f}")
+                if pls_pred is not None:
+                    st.write(f"**PLS MSE vs Variance:** {pls_mse:.3f} vs {ground_truth_var:.3f}")
+                
                 # Performance metrics table
                 col1, col2 = st.columns(2)
                 
