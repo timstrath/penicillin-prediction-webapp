@@ -240,22 +240,15 @@ def main():
             else:
                 st.error("❌ Models Not Loaded")
     
-    # Navigation using selectbox instead of tabs to avoid tab switching issues
-    st.sidebar.header("📋 Navigation")
-    page = st.sidebar.selectbox(
-        "Choose a section:",
-        ["📊 Results & Predictions", "🔬 Preprocessing", "📈 History", "⚙️ Settings"],
-        index=0  # Default to Results & Predictions
-    )
+    # Main tabs
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "🔬 Preprocessing", 
+        "📊 Results & Predictions", 
+        "📈 History", 
+        "⚙️ Settings"
+    ])
     
-    # Debug: Show selected page
-    st.sidebar.write(f"Selected: {page}")
-    
-    # Main content based on selected page
-    st.write(f"Debug: Current page is '{page}'")
-    
-    if page == "🔬 Preprocessing":
-        st.write("Debug: Entering Preprocessing section")
+    with tab1:
         st.header("🔬 Preprocessing Visualization")
         
         if st.session_state.data is not None and st.session_state.preprocessed_data is not None:
@@ -406,8 +399,7 @@ def main():
         else:
             st.error("Data not loaded. Please check the data file.")
     
-    elif page == "📊 Results & Predictions":
-        st.write("Debug: Entering Results & Predictions section")
+    with tab2:
         st.header("📊 Results & Predictions")
         
         if st.session_state.models_loaded and st.session_state.preprocessed_data is not None:
@@ -574,8 +566,7 @@ def main():
         else:
             st.warning("Please load models and data first.")
     
-    elif page == "📈 History":
-        st.write("Debug: Entering History section")
+    with tab3:
         st.header("📈 Prediction History")
         
         if st.session_state.prediction_history:
@@ -624,8 +615,7 @@ def main():
         else:
             st.info("No prediction history available. Run some predictions to see history here.")
     
-    elif page == "⚙️ Settings":
-        st.write("Debug: Entering Settings section")
+    with tab4:
         st.header("⚙️ Settings")
         
         col1, col2 = st.columns(2)
