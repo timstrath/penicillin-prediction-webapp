@@ -1539,58 +1539,83 @@ def main():
                             # Show an enhanced placeholder architecture diagram
                             st.info("🔄 **Architecture Preview:**")
                             
-                            # Create a more detailed ASCII art diagram
+                            # Create a clean, professional architecture diagram
                             st.markdown("""
-                            <div style="font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.2;">
-                            <pre style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6;">
-    ┌─────────────────────────────────────────────────────────────┐
-    │                    INPUT LAYER                              │
-    │  Process Variables (39)    │    Spectral Data (2200)       │
-    │  • Temperature             │    • Raman Spectra            │
-    │  • pH                      │    • 350-1750 cm⁻¹           │
-    │  • Pressure                │    • Preprocessed             │
-    │  • Flow rates              │                               │
-    └─────────────┬───────────────────────────────┬───────────────┘
-                  │                               │
-                  ▼                               ▼
-    ┌─────────────────────────┐    ┌─────────────────────────────┐
-    │      MLP BRANCH         │    │      1D-CNN BRANCH          │
-    │                         │    │                             │
-    │  Dense(128)             │    │  Conv1D(64, kernel=3)       │
-    │  BatchNorm              │    │  BatchNorm                  │
-    │  Dropout(0.3)           │    │  MaxPool1D(2)               │
-    │                         │    │                             │
-    │  Dense(64)              │    │  Conv1D(32, kernel=3)       │
-    │  BatchNorm              │    │  BatchNorm                  │
-    │  Dropout(0.2)           │    │  MaxPool1D(2)               │
-    │                         │    │  Dropout(0.3)               │
-    └─────────────┬───────────┘    └─────────────┬───────────────┘
-                  │                               │
-                  └───────────────┬───────────────┘
-                                  ▼
-                        ┌─────────────────────────┐
-                        │    FUSION LAYER         │
-                        │    (Concatenate)        │
-                        └─────────────┬───────────┘
-                                      ▼
-                        ┌─────────────────────────┐
-                        │   Dense(64)             │
-                        │   BatchNorm             │
-                        │   Dropout(0.2)          │
-                        └─────────────┬───────────┘
-                                      ▼
-                        ┌─────────────────────────┐
-                        │   Dense(32)             │
-                        │   BatchNorm             │
-                        │   Dropout(0.1)          │
-                        └─────────────┬───────────┘
-                                      ▼
-                        ┌─────────────────────────┐
-                        │   OUTPUT LAYER          │
-                        │   Dense(1)              │
-                        │   √(prediction)         │
-                        └─────────────────────────┘
-                            </pre>
+                            <div style="font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; line-height: 1.4;">
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 20px;">
+                                <h3 style="margin: 0; font-size: 18px;">🏗️ MLP+1D-CNN Hybrid Architecture</h3>
+                            </div>
+                            
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                                <div style="flex: 1; margin-right: 10px;">
+                                    <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; border-left: 4px solid #2196f3;">
+                                        <h4 style="margin: 0 0 10px 0; color: #1976d2;">📊 Process Inputs (39)</h4>
+                                        <ul style="margin: 0; padding-left: 20px; color: #424242;">
+                                            <li>Temperature</li>
+                                            <li>pH</li>
+                                            <li>Pressure</li>
+                                            <li>Flow rates</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div style="flex: 1; margin-left: 10px;">
+                                    <div style="background: #f3e5f5; padding: 15px; border-radius: 8px; border-left: 4px solid #9c27b0;">
+                                        <h4 style="margin: 0 0 10px 0; color: #7b1fa2;">🔬 Spectral Inputs (2200)</h4>
+                                        <ul style="margin: 0; padding-left: 20px; color: #424242;">
+                                            <li>Raman Spectra</li>
+                                            <li>350-1750 cm⁻¹</li>
+                                            <li>Preprocessed</li>
+                                            <li>Square root transformed</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                                <div style="flex: 1; margin-right: 10px;">
+                                    <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; border-left: 4px solid #4caf50;">
+                                        <h4 style="margin: 0 0 10px 0; color: #388e3c;">🧠 MLP Branch</h4>
+                                        <div style="color: #424242; font-size: 13px;">
+                                            <div>Dense(128) → BatchNorm → Dropout(0.3)</div>
+                                            <div style="margin: 5px 0;">↓</div>
+                                            <div>Dense(64) → BatchNorm → Dropout(0.2)</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="flex: 1; margin-left: 10px;">
+                                    <div style="background: #fff3e0; padding: 15px; border-radius: 8px; border-left: 4px solid #ff9800;">
+                                        <h4 style="margin: 0 0 10px 0; color: #f57c00;">🔍 1D-CNN Branch</h4>
+                                        <div style="color: #424242; font-size: 13px;">
+                                            <div>Conv1D(64) → BatchNorm → MaxPool1D(2)</div>
+                                            <div style="margin: 5px 0;">↓</div>
+                                            <div>Conv1D(32) → BatchNorm → MaxPool1D(2) → Dropout(0.3)</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div style="text-align: center; margin: 20px 0;">
+                                <div style="background: #fce4ec; padding: 15px; border-radius: 8px; border-left: 4px solid #e91e63; display: inline-block; min-width: 200px;">
+                                    <h4 style="margin: 0 0 10px 0; color: #c2185b;">🔗 Fusion Layer</h4>
+                                    <div style="color: #424242; font-size: 13px;">
+                                        <div>Concatenate → Dense(64) → BatchNorm → Dropout(0.2)</div>
+                                        <div style="margin: 5px 0;">↓</div>
+                                        <div>Dense(32) → BatchNorm → Dropout(0.1)</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div style="text-align: center;">
+                                <div style="background: #e0f2f1; padding: 15px; border-radius: 8px; border-left: 4px solid #009688; display: inline-block; min-width: 200px;">
+                                    <h4 style="margin: 0 0 10px 0; color: #00695c;">🎯 Output Layer</h4>
+                                    <div style="color: #424242; font-size: 13px;">
+                                        <div>Dense(1) → √(prediction)</div>
+                                        <div style="margin-top: 5px; font-weight: bold; color: #00695c;">
+                                            Penicillin Concentration (g/L)
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             </div>
                             """, unsafe_allow_html=True)
                             
