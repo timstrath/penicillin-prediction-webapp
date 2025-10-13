@@ -528,7 +528,13 @@ def main():
                             xaxis_title="Actual (g/L)",
                             yaxis_title="Predicted (g/L)",
                             height=400,
-                            showlegend=False
+                            showlegend=True,
+                            legend=dict(
+                                yanchor="top",
+                                y=0.99,
+                                xanchor="left",
+                                x=0.01
+                            )
                         )
                         
                         st.plotly_chart(fig_actual, use_container_width=True)
@@ -558,7 +564,13 @@ def main():
                             yaxis_title="Frequency",
                             height=400,
                             barmode='overlay',
-                            showlegend=False
+                            showlegend=True,
+                            legend=dict(
+                                yanchor="top",
+                                y=0.99,
+                                xanchor="left",
+                                x=0.01
+                            )
                         )
                         
                         st.plotly_chart(fig_dist, use_container_width=True)
