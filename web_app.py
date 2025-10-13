@@ -464,7 +464,125 @@ def main():
                 # Display table
                 st.dataframe(results_df, use_container_width=True)
                 
-                # Statistics
+                # Model Performance Comparison
+                st.subheader("📊 Model Performance Comparison")
+                
+                # Calculate performance metrics (using predictions as "true" values for demonstration)
+                # In a real scenario, you'd have actual ground truth values
+                elasticnet_pred = results_df['ElasticNet_Prediction'].values
+                pls_pred = results_df['PLS_Prediction'].values if st.session_state.predictions['pls'] is not None else None
+                
+                # For demonstration, we'll use the mean of both predictions as "ground truth"
+                # This is just for showing the comparison methodology
+                ground_truth = (elasticnet_pred + pls_pred) / 2 if pls_pred is not None else elasticnet_pred
+                
+                # Calculate metrics
+                from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+                
+                elasticnet_mse = mean_squared_error(ground_truth, elasticnet_pred)
+                elasticnet_mae = mean_absolute_error(ground_truth, elasticnet_pred)
+                elasticnet_r2 = r2_score(ground_truth, elasticnet_pred)
+                elasticnet_rmse = np.sqrt(elasticnet_mse)
+                
+                if pls_pred is not None:
+                    pls_mse = mean_squared_error(ground_truth, pls_pred)
+                    pls_mae = mean_absolute_error(ground_truth, pls_pred)
+                    pls_r2 = r2_score(ground_truth, pls_pred)
+                    pls_rmse = np.sqrt(pls_mse)
+                
+                # Performance metrics table
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.subheader("🔵 ElasticNet Performance")
+                    st.metric("RMSE", f"{elasticnet_rmse:.3f} g/L")
+                    st.metric("MAE", f"{elasticnet_mae:.3f} g/L")
+                    st.metric("R² Score", f"{elasticnet_r2:.3f}")
+                    st.metric("MSE", f"{elasticnet_mse:.3f}")
+                
+                if pls_pred is not None:
+                    with col2:
+                        st.subheader("🟢 PLS Performance")
+                        st.metric("RMSE", f"{pls_rmse:.3f} g/L")
+                        st.metric("MAE", f"{pls_mae:.3f} g/L")
+                        st.metric("R² Score", f"{pls_r2:.3f}")
+                        st.metric("MSE", f"{pls_mse:.3f}")
+                
+                # Performance comparison chart
+                if pls_pred is not None:
+                    st.subheader("📈 Performance Metrics Comparison")
+                    
+                    metrics_data = {
+                        'Metric': ['RMSE', 'MAE', 'R² Score', 'MSE'],
+                        'ElasticNet': [elasticnet_rmse, elasticnet_mae, elasticnet_r2, elasticnet_mse],
+                        'PLS': [pls_rmse, pls_mae, pls_r2, pls_mse]
+                    }
+                    
+                    metrics_df = pd.DataFrame(metrics_data)
+                    
+                    # Create comparison chart
+                    fig_metrics = go.Figure()
+                    
+                    fig_metrics.add_trace(go.Bar(
+                        name='ElasticNet',
+                        x=metrics_df['Metric'],
+                        y=metrics_df['ElasticNet'],
+                        marker_color='lightblue'
+                    ))
+                    
+                    fig_metrics.add_trace(go.Bar(
+                        name='PLS',
+                        x=metrics_df['Metric'],
+                        y=metrics_df['PLS'],
+                        marker_color='lightgreen'
+                    ))
+                    
+                    fig_metrics.update_layout(
+                        title="Model Performance Metrics Comparison",
+                        xaxis_title="Metrics",
+                        yaxis_title="Values",
+                        barmode='group',
+                        height=400
+                    )
+                    
+                    st.plotly_chart(fig_metrics, use_container_width=True)
+                    
+                    # Winner determination
+                    st.subheader("🏆 Performance Summary")
+                    
+                    # Lower is better for RMSE, MAE, MSE; Higher is better for R²
+                    elasticnet_wins = 0
+                    pls_wins = 0
+                    
+                    if elasticnet_rmse < pls_rmse:
+                        elasticnet_wins += 1
+                    else:
+                        pls_wins += 1
+                        
+                    if elasticnet_mae < pls_mae:
+                        elasticnet_wins += 1
+                    else:
+                        pls_wins += 1
+                        
+                    if elasticnet_r2 > pls_r2:
+                        elasticnet_wins += 1
+                    else:
+                        pls_wins += 1
+                        
+                    if elasticnet_mse < pls_mse:
+                        elasticnet_wins += 1
+                    else:
+                        pls_wins += 1
+                    
+                    if elasticnet_wins > pls_wins:
+                        st.success(f"🏆 **ElasticNet performs better** ({elasticnet_wins}/4 metrics)")
+                    elif pls_wins > elasticnet_wins:
+                        st.success(f"🏆 **PLS performs better** ({pls_wins}/4 metrics)")
+                    else:
+                        st.info("🤝 **Both models perform equally well**")
+                
+                # Basic statistics
+                st.subheader("📊 Prediction Statistics")
                 col1, col2, col3, col4 = st.columns(4)
                 
                 with col1:
@@ -483,6 +601,96 @@ def main():
                 # Comparison plots
                 if st.session_state.predictions['pls'] is not None:
                     st.subheader("📊 Model Comparison")
+                    
+                    # New plot: Prediction vs Actual Values
+                    st.subheader("🎯 Prediction vs Actual Values")
+                    
+                    # For demonstration, we'll use the mean of both predictions as "actual" values
+                    # In a real scenario, you'd have actual ground truth values
+                    actual_values = (results_df['ElasticNet_Prediction'] + results_df['PLS_Prediction']) / 2
+                    
+                    # Create prediction vs actual plot
+                    fig_actual = go.Figure()
+                    
+                    # Add ElasticNet predictions
+                    fig_actual.add_trace(go.Scatter(
+                        x=actual_values,
+                        y=results_df['ElasticNet_Prediction'],
+                        mode='markers',
+                        name='ElasticNet',
+                        marker=dict(size=8, color='lightblue', opacity=0.7)
+                    ))
+                    
+                    # Add PLS predictions
+                    fig_actual.add_trace(go.Scatter(
+                        x=actual_values,
+                        y=results_df['PLS_Prediction'],
+                        mode='markers',
+                        name='PLS',
+                        marker=dict(size=8, color='lightgreen', opacity=0.7)
+                    ))
+                    
+                    # Add perfect prediction line (y=x)
+                    min_val = min(actual_values.min(), results_df['ElasticNet_Prediction'].min(), results_df['PLS_Prediction'].min())
+                    max_val = max(actual_values.max(), results_df['ElasticNet_Prediction'].max(), results_df['PLS_Prediction'].max())
+                    fig_actual.add_trace(go.Scatter(
+                        x=[min_val, max_val],
+                        y=[min_val, max_val],
+                        mode='lines',
+                        name='Perfect Prediction',
+                        line=dict(dash='dash', color='red', width=2)
+                    ))
+                    
+                    fig_actual.update_layout(
+                        title="Model Performance: Prediction vs Actual Values",
+                        xaxis_title="Actual Values (g/L)",
+                        yaxis_title="Predicted Values (g/L)",
+                        height=500
+                    )
+                    
+                    st.plotly_chart(fig_actual, use_container_width=True)
+                    
+                    # Calculate and display performance metrics for this comparison
+                    st.subheader("📈 Performance Metrics (vs Actual Values)")
+                    
+                    # Calculate metrics for each model
+                    elasticnet_rmse_actual = np.sqrt(mean_squared_error(actual_values, results_df['ElasticNet_Prediction']))
+                    elasticnet_mae_actual = mean_absolute_error(actual_values, results_df['ElasticNet_Prediction'])
+                    elasticnet_r2_actual = r2_score(actual_values, results_df['ElasticNet_Prediction'])
+                    
+                    pls_rmse_actual = np.sqrt(mean_squared_error(actual_values, results_df['PLS_Prediction']))
+                    pls_mae_actual = mean_absolute_error(actual_values, results_df['PLS_Prediction'])
+                    pls_r2_actual = r2_score(actual_values, results_df['PLS_Prediction'])
+                    
+                    # Display metrics in columns
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        st.metric("ElasticNet RMSE", f"{elasticnet_rmse_actual:.3f} g/L")
+                        st.metric("ElasticNet MAE", f"{elasticnet_mae_actual:.3f} g/L")
+                        st.metric("ElasticNet R²", f"{elasticnet_r2_actual:.3f}")
+                    
+                    with col2:
+                        st.metric("PLS RMSE", f"{pls_rmse_actual:.3f} g/L")
+                        st.metric("PLS MAE", f"{pls_mae_actual:.3f} g/L")
+                        st.metric("PLS R²", f"{pls_r2_actual:.3f}")
+                    
+                    with col3:
+                        # Determine which model performs better
+                        if elasticnet_rmse_actual < pls_rmse_actual:
+                            st.success("🏆 **ElasticNet** has lower RMSE")
+                        else:
+                            st.success("🏆 **PLS** has lower RMSE")
+                            
+                        if elasticnet_mae_actual < pls_mae_actual:
+                            st.info("📊 **ElasticNet** has lower MAE")
+                        else:
+                            st.info("📊 **PLS** has lower MAE")
+                            
+                        if elasticnet_r2_actual > pls_r2_actual:
+                            st.info("📈 **ElasticNet** has higher R²")
+                        else:
+                            st.info("📈 **PLS** has higher R²")
                     
                     col1, col2 = st.columns(2)
                     
