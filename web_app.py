@@ -211,7 +211,6 @@ def main():
     
     # Header
     st.markdown('<h1 class="main-header">🧪 Penicillin Concentration Prediction Dashboard</h1>', unsafe_allow_html=True)
-    st.markdown('<p style="text-align: center; color: #666; font-size: 0.9em;">Updated with curated test data for optimal prediction results</p>', unsafe_allow_html=True)
     
     # Load data and models
     if st.session_state.data is None:
@@ -293,11 +292,12 @@ def main():
     """, unsafe_allow_html=True)
     
     # Main tabs
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "🔬 Preprocessing", 
         "📊 Results & Predictions", 
         "📈 History", 
-        "⚙️ Settings"
+        "⚙️ Settings",
+        "🏛️ Model Registry"
     ])
     
     with tab1:
@@ -797,6 +797,208 @@ def main():
             st.write(f"- Pandas Version: {pd.__version__}")
             st.write(f"- NumPy Version: {np.__version__}")
             st.write(f"- Plotly Version: {plotly.__version__}")
+    
+    with tab5:
+        st.header("🏛️ Model Registry - GMP Compliance")
+        st.markdown("**Pharmaceutical Industry Model Versioning & Tracking System**")
+        
+        # Load registry
+        try:
+            from model_registry import ModelRegistry
+            import sqlite3
+            
+            registry = ModelRegistry("pharma_model_registry.db")
+            
+            # Generate compliance report
+            report = registry.generate_compliance_report()
+            
+            # Key metrics
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric(
+                    label="📊 Total Models",
+                    value=report['total_models'],
+                    delta=None
+                )
+            
+            with col2:
+                st.metric(
+                    label="✅ Approved Models", 
+                    value=report['approved_models'],
+                    delta=f"{report['approved_models']/report['total_models']*100:.1f}%" if report['total_models'] > 0 else "0%"
+                )
+            
+            with col3:
+                st.metric(
+                    label="🔢 Total Versions",
+                    value=report['total_versions'],
+                    delta=None
+                )
+            
+            with col4:
+                compliance_status = "✅ COMPLIANT" if report['compliance_status'] == 'COMPLIANT' else "❌ NON-COMPLIANT"
+                st.markdown(f"""
+                <div style="background-color: #f8f9fa; padding: 1rem; border-radius: 0.5rem; border-left: 4px solid #1f4e79; margin: 0.5rem 0;">
+                    <h4>🏛️ Compliance Status</h4>
+                    <p style="background-color: #d4edda; color: #155724; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.875rem; font-weight: bold;">{compliance_status}</p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            # Model inventory
+            st.subheader("📚 Model Inventory")
+            
+            with sqlite3.connect(registry.db_path, timeout=30) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT m.model_id, m.model_name, m.model_type, m.description, 
+                           m.status, m.created_by, m.created_date, m.is_active
+                    FROM models m
+                    ORDER BY m.created_date DESC
+                """)
+                models = cursor.fetchall()
+            
+            if models:
+                df_models = pd.DataFrame(models, columns=[
+                    'ID', 'Name', 'Type', 'Description', 'Status', 'Created By', 'Created Date', 'Active'
+                ])
+                
+                # Status styling
+                def style_status(val):
+                    if val == 'APPROVED':
+                        return 'background-color: #d4edda; color: #155724'
+                    elif val == 'VALIDATED':
+                        return 'background-color: #d1ecf1; color: #0c5460'
+                    elif val == 'DRAFT':
+                        return 'background-color: #fff3cd; color: #856404'
+                    elif val == 'DEPRECATED':
+                        return 'background-color: #f8d7da; color: #721c24'
+                    return ''
+                
+                styled_df = df_models.style.applymap(style_status, subset=['Status'])
+                st.dataframe(styled_df, use_container_width=True)
+                
+                # Model details
+                selected_model = st.selectbox("Select model for details:", df_models['Name'].tolist())
+                
+                if selected_model:
+                    model_info = registry.get_model_info(
+                        selected_model.split('_')[0] + '_' + selected_model.split('_')[1],
+                        selected_model.split('_')[2] if len(selected_model.split('_')) > 2 else 'Regression'
+                    )
+                    
+                    if model_info:
+                        st.subheader(f"📋 Model Details: {selected_model}")
+                        
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            st.write("**Model Information:**")
+                            st.write(f"- **Type:** {model_info['model'][2]}")
+                            st.write(f"- **Status:** {model_info['model'][6]}")
+                            st.write(f"- **Created By:** {model_info['model'][4]}")
+                            st.write(f"- **Created Date:** {model_info['model'][5]}")
+                            st.write(f"- **Active:** {'Yes' if model_info['model'][7] else 'No'}")
+                        
+                        with col2:
+                            st.write("**Description:**")
+                            st.write(model_info['model'][3])
+                        
+                        # Versions
+                        if model_info['versions']:
+                            st.subheader("📝 Model Versions")
+                            versions_data = []
+                            for version in model_info['versions']:
+                                versions_data.append({
+                                    'Version': version[3],
+                                    'Created Date': version[9],
+                                    'Validation Status': version[11],
+                                    'Approved By': version[12] or 'Not Approved',
+                                    'Change Reason': version[13]
+                                })
+                            
+                            df_versions = pd.DataFrame(versions_data)
+                            st.dataframe(df_versions, use_container_width=True)
+            else:
+                st.info("No models found in the registry.")
+            
+            # Recent activity
+            st.subheader("📋 Recent Activity")
+            
+            audit_trail = registry.get_audit_trail()
+            if audit_trail:
+                recent_activity = []
+                for record in audit_trail[:10]:
+                    # Get model name for better context
+                    model_name = "N/A"
+                    if record[1] == "models" and record[2]:  # If it's a models table record
+                        with sqlite3.connect(registry.db_path, timeout=30) as conn:
+                            cursor = conn.cursor()
+                            cursor.execute("SELECT model_name FROM models WHERE model_id = ?", (record[2],))
+                            result = cursor.fetchone()
+                            if result:
+                                model_name = result[0]
+                    elif record[1] == "model_versions" and record[2]:  # If it's a model_versions record
+                        with sqlite3.connect(registry.db_path, timeout=30) as conn:
+                            cursor = conn.cursor()
+                            cursor.execute("""
+                                SELECT m.model_name FROM model_versions mv
+                                JOIN models m ON mv.model_id = m.model_id
+                                WHERE mv.version_id = ?
+                            """, (record[2],))
+                            result = cursor.fetchone()
+                            if result:
+                                model_name = result[0]
+                    elif record[1] == "model_validations" and record[2]:  # If it's a validation record
+                        with sqlite3.connect(registry.db_path, timeout=30) as conn:
+                            cursor = conn.cursor()
+                            cursor.execute("""
+                                SELECT m.model_name FROM model_validations mv
+                                JOIN model_versions mvv ON mv.version_id = mvv.version_id
+                                JOIN models m ON mvv.model_id = m.model_id
+                                WHERE mv.validation_id = ?
+                            """, (record[2],))
+                            result = cursor.fetchone()
+                            if result:
+                                model_name = result[0]
+                    
+                    recent_activity.append({
+                        'Date': record[6],
+                        'Model': model_name,
+                        'Table': record[1],
+                        'Action': record[3],
+                        'User': record[7],
+                        'Reason': record[8]
+                    })
+                
+                df_activity = pd.DataFrame(recent_activity)
+                st.dataframe(df_activity, use_container_width=True)
+            else:
+                st.info("No recent activity found.")
+            
+            # Compliance information
+            st.subheader("🏛️ Regulatory Compliance")
+            
+            st.markdown("""
+            **This Model Registry implements pharmaceutical industry best practices:**
+            
+            - **21 CFR Part 11** - Electronic Records and Signatures
+            - **ICH Q7** - Good Manufacturing Practice for Active Pharmaceutical Ingredients
+            - **FDA Process Validation** - Lifecycle approach
+            - **EU GMP Annex 11** - Computerized Systems
+            
+            **Key Features:**
+            - ✅ Version control with semantic versioning
+            - ✅ Complete audit trail for regulatory compliance
+            - ✅ File integrity verification (SHA-256)
+            - ✅ Validation tracking and approval workflow
+            - ✅ Deployment management across environments
+            - ✅ Performance monitoring and drift detection
+            """)
+            
+        except Exception as e:
+            st.error(f"Error loading model registry: {str(e)}")
+            st.info("Please ensure the model registry database exists. Run 'python populate_model_registry.py' to initialize.")
 
 if __name__ == "__main__":
     main()
