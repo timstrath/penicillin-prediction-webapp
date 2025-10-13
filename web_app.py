@@ -455,8 +455,6 @@ def main():
             
             # Display results
             if st.session_state.predictions:
-                st.subheader("📈 Prediction Results")
-                
                 # Create results DataFrame
                 results_data = []
                 for i in range(len(st.session_state.predictions['elasticnet'])):
@@ -470,7 +468,6 @@ def main():
                     results_data.append(row)
                 
                 results_df = pd.DataFrame(results_data)
-                
                 
                 # Model Performance Comparison
                 st.subheader("📊 Model Performance Comparison")
@@ -519,7 +516,7 @@ def main():
                         st.metric("MSE", f"{pls_mse:.3f}")
                 
                 
-                # Comparison plots
+                # 1. MODEL COMPARISON PLOTS (TOP)
                 if st.session_state.predictions['pls'] is not None:
                     st.subheader("📊 Model Comparison")
                     
@@ -532,7 +529,7 @@ def main():
                         
                         # Use the real target values from the test data
                         target_col = 'Penicillin concentration(P:g/L)'
-                        actual_values = st.session_state.data[target_col].values
+                        actual_values = st.session_state.data[target_col].values[:len(elasticnet_pred)]
                         
                         fig_actual = go.Figure()
                         
@@ -569,7 +566,7 @@ def main():
                             title="Model Performance",
                             xaxis_title="Actual (g/L)",
                             yaxis_title="Predicted (g/L)",
-                            height=350,
+                            height=400,
                             showlegend=False
                         )
                         
@@ -598,14 +595,19 @@ def main():
                             title="Prediction Distribution",
                             xaxis_title="Concentration (g/L)",
                             yaxis_title="Frequency",
-                            height=350,
+                            height=400,
                             barmode='overlay',
                             showlegend=False
                         )
                         
                         st.plotly_chart(fig_dist, use_container_width=True)
-                    
-                    # Performance metrics below the plots
+                
+                # 2. MODEL PERFORMANCE COMPARISON (MIDDLE)
+                st.subheader("📊 Model Performance Comparison")
+                
+                # 3. PREDICTION TABLE (BOTTOM)
+                st.subheader("📈 Prediction Results")
+                st.dataframe(results_df, use_container_width=True)
                 
                 else:
                     # Single model results
