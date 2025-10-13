@@ -307,7 +307,7 @@ def main():
             col1, col2 = st.columns(2)
             
             with col1:
-                st.subheader("Raw Raman Spectra")
+                st.subheader("Normalized Raman Spectra")
                 
                 # Find spectral columns (numeric columns that represent wavelengths)
                 numeric_cols = st.session_state.data.select_dtypes(include=[np.number]).columns
@@ -385,7 +385,7 @@ def main():
                         break
                 
                 fig_raw.update_layout(
-                    title="Raw Raman Spectra (First 10) - Normalized",
+                    title="Normalized Raman Spectra (First 10)",
                     xaxis_title="Wavelength (cm⁻¹)",
                     yaxis_title="Intensity (Normalized)",
                     height=400,
