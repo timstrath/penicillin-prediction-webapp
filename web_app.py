@@ -482,10 +482,6 @@ def main():
                         
                         st.success(f"✅ Predictions completed for {num_spectra} spectra!")
             
-            # Clear results button (optional)
-            if st.button("🔄 Clear Results", help="Clear current predictions and rerun"):
-                st.session_state.predictions = {}
-                st.rerun()
             
             # Display results
             if st.session_state.predictions:
