@@ -328,25 +328,27 @@ def main():
                     preprocessed_spectra = st.session_state.preprocessed_data[:20]
                 else:
                     st.warning("No preprocessed data available for visualization")
-                    continue
+                    preprocessed_spectra = None
                 
-                # Use the same wavelength range as raw data (350-1750 cm⁻¹)
-                preprocessed_wavelengths = wavelengths
-                
-                # Preprocessed wavelength information (no debug text)
-                
-                fig_processed = go.Figure()
-                for i in range(min(10, len(preprocessed_spectra))):
-                    fig_processed.add_trace(go.Scatter(
-                        x=preprocessed_wavelengths,
-                        y=preprocessed_spectra[i],
-                        mode='lines',
-                        name=f'Spectrum {i+1}',
-                        opacity=0.7,
-                        line=dict(width=1)
-                    ))
-                
-                fig_processed.update_layout(
+                # Only plot if we have valid preprocessed data
+                if preprocessed_spectra is not None:
+                    # Use the same wavelength range as raw data (350-1750 cm⁻¹)
+                    preprocessed_wavelengths = wavelengths
+                    
+                    # Preprocessed wavelength information (no debug text)
+                    
+                    fig_processed = go.Figure()
+                    for i in range(min(10, len(preprocessed_spectra))):
+                        fig_processed.add_trace(go.Scatter(
+                            x=preprocessed_wavelengths,
+                            y=preprocessed_spectra[i],
+                            mode='lines',
+                            name=f'Spectrum {i+1}',
+                            opacity=0.7,
+                            line=dict(width=1)
+                        ))
+                    
+                    fig_processed.update_layout(
                     title="Preprocessed Spectra (First 10)",
                     xaxis_title="Wavelength (cm⁻¹)",
                     yaxis_title="Intensity (Processed)",
@@ -354,7 +356,7 @@ def main():
                     showlegend=False
                 )
                 
-                st.plotly_chart(fig_processed, use_container_width=True)
+                    st.plotly_chart(fig_processed, use_container_width=True)
             
             # Preprocessing steps info
             st.subheader("📋 Preprocessing Steps Applied")
