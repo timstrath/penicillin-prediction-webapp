@@ -471,8 +471,6 @@ def main():
                 
                 results_df = pd.DataFrame(results_data)
                 
-                # Display table
-                st.dataframe(results_df, use_container_width=True)
                 
                 # Model Performance Comparison
                 st.subheader("📊 Model Performance Comparison")
@@ -525,44 +523,11 @@ def main():
                 if st.session_state.predictions['pls'] is not None:
                     st.subheader("📊 Model Comparison")
                     
-                    # Three plots in a row: Scatter, Prediction vs Actual, Distribution
-                    col1, col2, col3 = st.columns(3)
+                    # Two plots in a row: Prediction vs Actual, Distribution (removed Model Agreement)
+                    col1, col2 = st.columns(2)
                     
                     with col1:
-                        # Plot 1: ElasticNet vs PLS Scatter Plot
-                        st.subheader("🔵 ElasticNet vs PLS")
-                        fig_scatter = go.Figure()
-                        fig_scatter.add_trace(go.Scatter(
-                            x=results_df['ElasticNet_Prediction'],
-                            y=results_df['PLS_Prediction'],
-                            mode='markers',
-                            name='Predictions',
-                            marker=dict(size=6, color='#1f77b4', opacity=0.7)  # Distinctive blue
-                        ))
-                        
-                        # Add diagonal line
-                        min_val = min(results_df['ElasticNet_Prediction'].min(), results_df['PLS_Prediction'].min())
-                        max_val = max(results_df['ElasticNet_Prediction'].max(), results_df['PLS_Prediction'].max())
-                        fig_scatter.add_trace(go.Scatter(
-                            x=[min_val, max_val],
-                            y=[min_val, max_val],
-                            mode='lines',
-                            name='Perfect Agreement',
-                            line=dict(dash='dash', color='red', width=2)
-                        ))
-                        
-                        fig_scatter.update_layout(
-                            title="Model Agreement",
-                            xaxis_title="ElasticNet (g/L)",
-                            yaxis_title="PLS (g/L)",
-                            height=350,
-                            showlegend=False
-                        )
-                        
-                        st.plotly_chart(fig_scatter, use_container_width=True)
-                    
-                    with col2:
-                        # Plot 2: Prediction vs Actual Values (NEW - in the middle)
+                        # Plot 1: Prediction vs Actual Values
                         st.subheader("🎯 Prediction vs Actual")
                         
                         # Use the real target values from the test data
@@ -610,8 +575,8 @@ def main():
                         
                         st.plotly_chart(fig_actual, use_container_width=True)
                     
-                    with col3:
-                        # Plot 3: Distribution Comparison
+                    with col2:
+                        # Plot 2: Distribution Comparison
                         st.subheader("📊 Distribution")
                         fig_dist = go.Figure()
                         fig_dist.add_trace(go.Histogram(
@@ -661,6 +626,10 @@ def main():
                     )
                     
                     st.plotly_chart(fig_single, use_container_width=True)
+                
+                # 3. PREDICTION TABLE (BOTTOM)
+                st.subheader("📈 Prediction Results")
+                st.dataframe(results_df, use_container_width=True)
         
         else:
             st.warning("Please load models and data first.")
