@@ -520,7 +520,7 @@ def main():
                             y=[min_val, max_val],
                             mode='lines',
                             name='Perfect Prediction',
-                            line=dict(dash='dash', color='red', width=2)
+                            line=dict(dash='dash', color='#1f77b4', width=2)
                         ))
                         
                         fig_actual.update_layout(
@@ -564,7 +564,7 @@ def main():
                         ))
                         
                         # Add vertical line at zero
-                        fig_residuals.add_vline(x=0, line_dash="dash", line_color="red", 
+                        fig_residuals.add_vline(x=0, line_dash="dash", line_color="#1f77b4", 
                                               annotation_text="Perfect Prediction", 
                                               annotation_position="top")
                         
