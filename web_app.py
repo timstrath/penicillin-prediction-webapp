@@ -135,29 +135,9 @@ def preprocess_data(data, pipeline):
         # Fill ALL NaN values with 0 (same as training data)
         data_copy = data_copy.fillna(0)
         
-        # The preprocessing pipeline expects only spectral columns (numeric columns that look like wavelengths)
-        # Find spectral columns (numeric columns that look like wavelengths)
-        numeric_cols = data_copy.select_dtypes(include=[np.number]).columns
-        spectral_cols = [col for col in numeric_cols if str(col).replace('.', '').isdigit()]
-        
-        # Extract only spectral data for preprocessing
-        spectral_data = data_copy[spectral_cols]
-        
-        # Apply the preprocessing pipeline to spectral data only
-        preprocessed_spectral = pipeline.transform(spectral_data)
-        
-        # Get non-spectral features (process features)
-        non_spectral_cols = [col for col in data_copy.columns if col not in spectral_cols]
-        process_features = data_copy[non_spectral_cols].values
-        
-        # Combine processed spectral data with process features
-        # Standardize process features
-        from sklearn.preprocessing import StandardScaler
-        scaler = StandardScaler()
-        process_features_scaled = scaler.fit_transform(process_features)
-        
-        # Combine spectral and process features
-        preprocessed = np.concatenate([process_features_scaled, preprocessed_spectral], axis=1)
+        # The preprocessing pipeline expects the EXACT same feature structure as training
+        # Apply the preprocessing pipeline to the entire dataset
+        preprocessed = pipeline.transform(data_copy)
         
         return preprocessed
     except Exception as e:
@@ -176,13 +156,9 @@ def preprocess_data_for_visualization(data, pipeline):
         # Fill ALL NaN values with 0 (same as training data)
         data_copy = data_copy.fillna(0)
         
-        # Extract only spectral data for preprocessing (same as main preprocessing)
-        numeric_cols = data_copy.select_dtypes(include=[np.number]).columns
-        spectral_cols = [col for col in numeric_cols if str(col).replace('.', '').isdigit()]
-        spectral_data = data_copy[spectral_cols]
-        
         # Apply preprocessing steps up to (but not including) the final StandardScaler
-        current_data = spectral_data
+        # Use the same data structure as training
+        current_data = data_copy
         for step_name, transformer in pipeline.steps[:-1]:  # Skip the last step (StandardScaler)
             current_data = transformer.transform(current_data)
         
