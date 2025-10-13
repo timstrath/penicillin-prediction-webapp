@@ -6,6 +6,10 @@ data_2000_samples/
 # Allow test data for deployment
 !test_data/test_samples.csv
 
+# Allow model files for web app deployment
+!app/models/*.h5
+!app/models/*.pkl
+
 # Python cache
 __pycache__/
 *.pyc
