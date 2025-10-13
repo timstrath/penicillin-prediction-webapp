@@ -484,7 +484,8 @@ def main():
                 
                 # Use the real target values from the test data as ground truth
                 target_col = 'Penicillin concentration(P:g/L)'
-                ground_truth = st.session_state.data[target_col].values
+                # Slice ground truth to match the number of predictions made
+                ground_truth = st.session_state.data[target_col].values[:len(elasticnet_pred)]
                 
                 
                 # Calculate metrics
