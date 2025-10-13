@@ -602,58 +602,125 @@ def main():
                 if st.session_state.predictions['pls'] is not None:
                     st.subheader("📊 Model Comparison")
                     
-                    # New plot: Prediction vs Actual Values
-                    st.subheader("🎯 Prediction vs Actual Values")
+                    # Three plots in a row: Scatter, Prediction vs Actual, Distribution
+                    col1, col2, col3 = st.columns(3)
                     
-                    # For demonstration, we'll use the mean of both predictions as "actual" values
-                    # In a real scenario, you'd have actual ground truth values
-                    actual_values = (results_df['ElasticNet_Prediction'] + results_df['PLS_Prediction']) / 2
+                    with col1:
+                        # Plot 1: ElasticNet vs PLS Scatter Plot
+                        st.subheader("🔵 ElasticNet vs PLS")
+                        fig_scatter = go.Figure()
+                        fig_scatter.add_trace(go.Scatter(
+                            x=results_df['ElasticNet_Prediction'],
+                            y=results_df['PLS_Prediction'],
+                            mode='markers',
+                            name='Predictions',
+                            marker=dict(size=6, color='#1f77b4', opacity=0.7)  # Distinctive blue
+                        ))
+                        
+                        # Add diagonal line
+                        min_val = min(results_df['ElasticNet_Prediction'].min(), results_df['PLS_Prediction'].min())
+                        max_val = max(results_df['ElasticNet_Prediction'].max(), results_df['PLS_Prediction'].max())
+                        fig_scatter.add_trace(go.Scatter(
+                            x=[min_val, max_val],
+                            y=[min_val, max_val],
+                            mode='lines',
+                            name='Perfect Agreement',
+                            line=dict(dash='dash', color='red', width=2)
+                        ))
+                        
+                        fig_scatter.update_layout(
+                            title="Model Agreement",
+                            xaxis_title="ElasticNet (g/L)",
+                            yaxis_title="PLS (g/L)",
+                            height=350,
+                            showlegend=False
+                        )
+                        
+                        st.plotly_chart(fig_scatter, use_container_width=True)
                     
-                    # Create prediction vs actual plot
-                    fig_actual = go.Figure()
+                    with col2:
+                        # Plot 2: Prediction vs Actual Values (NEW - in the middle)
+                        st.subheader("🎯 Prediction vs Actual")
+                        
+                        # For demonstration, we'll use the mean of both predictions as "actual" values
+                        actual_values = (results_df['ElasticNet_Prediction'] + results_df['PLS_Prediction']) / 2
+                        
+                        fig_actual = go.Figure()
+                        
+                        # Add ElasticNet predictions
+                        fig_actual.add_trace(go.Scatter(
+                            x=actual_values,
+                            y=results_df['ElasticNet_Prediction'],
+                            mode='markers',
+                            name='ElasticNet',
+                            marker=dict(size=6, color='#ff7f0e', opacity=0.7)  # Distinctive orange
+                        ))
+                        
+                        # Add PLS predictions
+                        fig_actual.add_trace(go.Scatter(
+                            x=actual_values,
+                            y=results_df['PLS_Prediction'],
+                            mode='markers',
+                            name='PLS',
+                            marker=dict(size=6, color='#2ca02c', opacity=0.7)  # Distinctive green
+                        ))
+                        
+                        # Add perfect prediction line (y=x)
+                        min_val = min(actual_values.min(), results_df['ElasticNet_Prediction'].min(), results_df['PLS_Prediction'].min())
+                        max_val = max(actual_values.max(), results_df['ElasticNet_Prediction'].max(), results_df['PLS_Prediction'].max())
+                        fig_actual.add_trace(go.Scatter(
+                            x=[min_val, max_val],
+                            y=[min_val, max_val],
+                            mode='lines',
+                            name='Perfect Prediction',
+                            line=dict(dash='dash', color='red', width=2)
+                        ))
+                        
+                        fig_actual.update_layout(
+                            title="Model Performance",
+                            xaxis_title="Actual (g/L)",
+                            yaxis_title="Predicted (g/L)",
+                            height=350,
+                            showlegend=False
+                        )
+                        
+                        st.plotly_chart(fig_actual, use_container_width=True)
                     
-                    # Add ElasticNet predictions
-                    fig_actual.add_trace(go.Scatter(
-                        x=actual_values,
-                        y=results_df['ElasticNet_Prediction'],
-                        mode='markers',
-                        name='ElasticNet',
-                        marker=dict(size=8, color='lightblue', opacity=0.7)
-                    ))
+                    with col3:
+                        # Plot 3: Distribution Comparison
+                        st.subheader("📊 Distribution")
+                        fig_dist = go.Figure()
+                        fig_dist.add_trace(go.Histogram(
+                            x=results_df['ElasticNet_Prediction'],
+                            name='ElasticNet',
+                            opacity=0.7,
+                            nbinsx=15,
+                            marker_color='#ff7f0e'  # Same orange as scatter plot
+                        ))
+                        fig_dist.add_trace(go.Histogram(
+                            x=results_df['PLS_Prediction'],
+                            name='PLS',
+                            opacity=0.7,
+                            nbinsx=15,
+                            marker_color='#2ca02c'  # Same green as scatter plot
+                        ))
+                        
+                        fig_dist.update_layout(
+                            title="Prediction Distribution",
+                            xaxis_title="Concentration (g/L)",
+                            yaxis_title="Frequency",
+                            height=350,
+                            barmode='overlay',
+                            showlegend=False
+                        )
+                        
+                        st.plotly_chart(fig_dist, use_container_width=True)
                     
-                    # Add PLS predictions
-                    fig_actual.add_trace(go.Scatter(
-                        x=actual_values,
-                        y=results_df['PLS_Prediction'],
-                        mode='markers',
-                        name='PLS',
-                        marker=dict(size=8, color='lightgreen', opacity=0.7)
-                    ))
-                    
-                    # Add perfect prediction line (y=x)
-                    min_val = min(actual_values.min(), results_df['ElasticNet_Prediction'].min(), results_df['PLS_Prediction'].min())
-                    max_val = max(actual_values.max(), results_df['ElasticNet_Prediction'].max(), results_df['PLS_Prediction'].max())
-                    fig_actual.add_trace(go.Scatter(
-                        x=[min_val, max_val],
-                        y=[min_val, max_val],
-                        mode='lines',
-                        name='Perfect Prediction',
-                        line=dict(dash='dash', color='red', width=2)
-                    ))
-                    
-                    fig_actual.update_layout(
-                        title="Model Performance: Prediction vs Actual Values",
-                        xaxis_title="Actual Values (g/L)",
-                        yaxis_title="Predicted Values (g/L)",
-                        height=500
-                    )
-                    
-                    st.plotly_chart(fig_actual, use_container_width=True)
-                    
-                    # Calculate and display performance metrics for this comparison
-                    st.subheader("📈 Performance Metrics (vs Actual Values)")
+                    # Performance metrics below the plots
+                    st.subheader("📈 Performance Metrics")
                     
                     # Calculate metrics for each model
+                    actual_values = (results_df['ElasticNet_Prediction'] + results_df['PLS_Prediction']) / 2
                     elasticnet_rmse_actual = np.sqrt(mean_squared_error(actual_values, results_df['ElasticNet_Prediction']))
                     elasticnet_mae_actual = mean_absolute_error(actual_values, results_df['ElasticNet_Prediction'])
                     elasticnet_r2_actual = r2_score(actual_values, results_df['ElasticNet_Prediction'])
@@ -691,65 +758,6 @@ def main():
                             st.info("📈 **ElasticNet** has higher R²")
                         else:
                             st.info("📈 **PLS** has higher R²")
-                    
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        # Scatter plot comparison
-                        fig_scatter = go.Figure()
-                        fig_scatter.add_trace(go.Scatter(
-                            x=results_df['ElasticNet_Prediction'],
-                            y=results_df['PLS_Prediction'],
-                            mode='markers',
-                            name='Predictions',
-                            marker=dict(size=8, opacity=0.6)
-                        ))
-                        
-                        # Add diagonal line
-                        min_val = min(results_df['ElasticNet_Prediction'].min(), results_df['PLS_Prediction'].min())
-                        max_val = max(results_df['ElasticNet_Prediction'].max(), results_df['PLS_Prediction'].max())
-                        fig_scatter.add_trace(go.Scatter(
-                            x=[min_val, max_val],
-                            y=[min_val, max_val],
-                            mode='lines',
-                            name='Perfect Agreement',
-                            line=dict(dash='dash', color='red')
-                        ))
-                        
-                        fig_scatter.update_layout(
-                            title="ElasticNet vs PLS Predictions",
-                            xaxis_title="ElasticNet Prediction (g/L)",
-                            yaxis_title="PLS Prediction (g/L)",
-                            height=400
-                        )
-                        
-                        st.plotly_chart(fig_scatter, use_container_width=True)
-                    
-                    with col2:
-                        # Distribution comparison
-                        fig_dist = go.Figure()
-                        fig_dist.add_trace(go.Histogram(
-                            x=results_df['ElasticNet_Prediction'],
-                            name='ElasticNet',
-                            opacity=0.7,
-                            nbinsx=20
-                        ))
-                        fig_dist.add_trace(go.Histogram(
-                            x=results_df['PLS_Prediction'],
-                            name='PLS',
-                            opacity=0.7,
-                            nbinsx=20
-                        ))
-                        
-                        fig_dist.update_layout(
-                            title="Prediction Distribution",
-                            xaxis_title="Concentration (g/L)",
-                            yaxis_title="Frequency",
-                            height=400,
-                            barmode='overlay'
-                        )
-                        
-                        st.plotly_chart(fig_dist, use_container_width=True)
                 
                 else:
                     # Single model results
