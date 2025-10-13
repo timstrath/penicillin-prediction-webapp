@@ -484,7 +484,7 @@ def main():
                 
                 # Use the real target values from the test data as ground truth
                 target_col = 'Penicillin concentration(P:g/L)'
-                ground_truth = data[target_col].values
+                ground_truth = st.session_state.data[target_col].values
                 
                 # Calculate metrics
                 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
@@ -654,7 +654,7 @@ def main():
                         
                         # Use the real target values from the test data
                         target_col = 'Penicillin concentration(P:g/L)'
-                        actual_values = data[target_col].values
+                        actual_values = st.session_state.data[target_col].values
                         
                         fig_actual = go.Figure()
                         
