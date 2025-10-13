@@ -948,70 +948,107 @@ def main():
                     with col4:
                         st.metric("MSE", f"{elasticnet_mse:.3f}")
                     
-                    # Single model prediction vs actual plot
-                    st.subheader("🎯 Prediction vs Actual Values")
+                    # Three plots in organized layout
+                    st.subheader("📊 Model Performance Analysis")
                     
-                    fig = go.Figure()
-                    
-                    # Add scatter plot
-                    fig.add_trace(go.Scatter(
-                        x=ground_truth,
-                        y=elasticnet_pred,
-                        mode='markers',
-                        name='ElasticNet Predictions',
-                        marker=dict(
-                            color='#d62728',
-                            size=8,
-                            opacity=0.7
-                        ),
-                        showlegend=True
-                    ))
-                    
-                    # Add perfect prediction line
-                    min_val = min(min(ground_truth), min(elasticnet_pred))
-                    max_val = max(max(ground_truth), max(elasticnet_pred))
-                    fig.add_trace(go.Scatter(
-                        x=[min_val, max_val],
-                        y=[min_val, max_val],
-                        mode='lines',
-                        name='Perfect Prediction',
-                        line=dict(color='#1f77b4', dash='dash'),
-                        showlegend=True
-                    ))
-                    
-                    fig.update_layout(
-                        title="ElasticNet: Prediction vs Actual Values",
-                        xaxis_title="Actual Penicillin Concentration (g/L)",
-                        yaxis_title="Predicted Penicillin Concentration (g/L)",
-                        height=500,
-                        showlegend=True
-                    )
-                    
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Residuals distribution
-                    st.subheader("📊 Residuals Distribution")
-                    
+                    # Calculate residuals
                     residuals = elasticnet_pred - ground_truth
                     
-                    fig = go.Figure()
-                    fig.add_trace(go.Histogram(
-                        x=residuals,
-                        nbinsx=20,
-                        name='Residuals',
-                        marker_color='#d62728',
-                        opacity=0.7
-                    ))
+                    # Create three columns for the plots
+                    col1, col2, col3 = st.columns(3)
                     
-                    fig.update_layout(
-                        title="ElasticNet: Distribution of Prediction Residuals",
-                        xaxis_title="Residuals (Predicted - Actual)",
-                        yaxis_title="Frequency",
-                        height=400,
-                        showlegend=False
-                    )
+                    with col1:
+                        # Prediction vs Actual scatter plot
+                        fig1 = go.Figure()
+                        
+                        # Add scatter plot
+                        fig1.add_trace(go.Scatter(
+                            x=ground_truth,
+                            y=elasticnet_pred,
+                            mode='markers',
+                            name='ElasticNet Predictions',
+                            marker=dict(
+                                color='#d62728',
+                                size=8,
+                                opacity=0.7
+                            ),
+                            showlegend=True
+                        ))
+                        
+                        # Add perfect prediction line
+                        min_val = min(min(ground_truth), min(elasticnet_pred))
+                        max_val = max(max(ground_truth), max(elasticnet_pred))
+                        fig1.add_trace(go.Scatter(
+                            x=[min_val, max_val],
+                            y=[min_val, max_val],
+                            mode='lines',
+                            name='Perfect Prediction',
+                            line=dict(color='#1f77b4', dash='dash'),
+                            showlegend=True
+                        ))
+                        
+                        fig1.update_layout(
+                            title="Prediction vs Actual",
+                            xaxis_title="Actual (g/L)",
+                            yaxis_title="Predicted (g/L)",
+                            height=400,
+                            showlegend=True
+                        )
+                        
+                        st.plotly_chart(fig1, use_container_width=True)
                     
-                    st.plotly_chart(fig, use_container_width=True)
+                    with col2:
+                        # Residuals distribution
+                        fig2 = go.Figure()
+                        fig2.add_trace(go.Histogram(
+                            x=residuals,
+                            nbinsx=20,
+                            name='Residuals',
+                            marker_color='#d62728',
+                            opacity=0.7
+                        ))
+                        
+                        fig2.update_layout(
+                            title="Residuals Distribution",
+                            xaxis_title="Residuals (g/L)",
+                            yaxis_title="Frequency",
+                            height=400,
+                            showlegend=False
+                        )
+                        
+                        st.plotly_chart(fig2, use_container_width=True)
+                    
+                    with col3:
+                        # Concentration distribution
+                        fig3 = go.Figure()
+                        
+                        # Add actual concentration distribution
+                        fig3.add_trace(go.Histogram(
+                            x=ground_truth,
+                            nbinsx=20,
+                            name='Actual Concentrations',
+                            marker_color='#2ca02c',
+                            opacity=0.7
+                        ))
+                        
+                        # Add predicted concentration distribution
+                        fig3.add_trace(go.Histogram(
+                            x=elasticnet_pred,
+                            nbinsx=20,
+                            name='Predicted Concentrations',
+                            marker_color='#d62728',
+                            opacity=0.7
+                        ))
+                        
+                        fig3.update_layout(
+                            title="Concentration Distribution",
+                            xaxis_title="Penicillin Concentration (g/L)",
+                            yaxis_title="Frequency",
+                            height=400,
+                            showlegend=True
+                        )
+                        
+                        st.plotly_chart(fig3, use_container_width=True)
                     
                     # Prediction results table
                     st.subheader("📈 Prediction Results")
