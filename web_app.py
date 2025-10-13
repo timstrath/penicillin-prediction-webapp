@@ -412,10 +412,12 @@ def main():
     """, unsafe_allow_html=True)
     
     # Main tabs
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
         "🔬 Preprocessing", 
         "📊 Results & Predictions", 
         "🔵 ElasticNet Model",
+        "🟢 PLS Model",
+        "🟣 MLP+1D-CNN Model",
         "📈 History", 
         "⚙️ Settings",
         "🏛️ Model Registry"
@@ -1070,6 +1072,422 @@ def main():
             st.warning("Please load models and data first.")
     
     with tab4:
+        st.header("🟢 PLS Model - Preprocessing & Predictions")
+        
+        if st.session_state.data is not None and st.session_state.models_loaded:
+            # Load models
+            pipeline, elastic_model, pls_model = load_models()
+            
+            if pipeline is not None and pls_model is not None:
+                # PREPROCESSING VISUALIZATION
+                st.subheader("🔬 Preprocessing Pipeline")
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.subheader("Raw Raman Spectra")
+                    
+                    # Find spectral columns (numeric columns that represent wavelengths)
+                    numeric_cols = st.session_state.data.select_dtypes(include=[np.number]).columns
+                    spectral_cols = [col for col in numeric_cols if str(col).replace('.', '').isdigit()]
+                    
+                    if len(spectral_cols) > 0:
+                        # Use the actual spectral columns - TRULY RAW DATA
+                        raw_spectra = st.session_state.data[spectral_cols].iloc[:10].copy()
+                        raw_spectra = raw_spectra.fillna(0)
+                        
+                        try:
+                            wavelengths = np.array([float(col) for col in spectral_cols])
+                            # Apply RangeCut: 350-1750 cm⁻¹
+                            mask = (wavelengths >= 350) & (wavelengths <= 1750)
+                            wavelengths = wavelengths[mask]
+                            raw_spectra = raw_spectra.iloc[:, mask]
+                            
+                            # Sort wavelengths in ascending order
+                            sort_indices = np.argsort(wavelengths)
+                            wavelengths = wavelengths[sort_indices]
+                            raw_spectra = raw_spectra.iloc[:, sort_indices]
+                            
+                            # Create plot
+                            fig = go.Figure()
+                            
+                            for i in range(min(10, len(raw_spectra))):
+                                fig.add_trace(go.Scatter(
+                                    x=wavelengths,
+                                    y=raw_spectra.iloc[i].values,
+                                    mode='lines',
+                                    name=f'Sample {i+1}',
+                                    line=dict(width=1),
+                                    opacity=0.7
+                                ))
+                            
+                            fig.update_layout(
+                                title="Raw Raman Spectra (First 10) - 350-1750 cm⁻¹",
+                                xaxis_title="Wavelength (cm⁻¹)",
+                                yaxis_title="Intensity (Raw Counts)",
+                                height=400,
+                                showlegend=True
+                            )
+                            
+                            st.plotly_chart(fig, use_container_width=True)
+                            
+                        except Exception as e:
+                            st.error(f"Error processing raw spectra: {str(e)}")
+                    else:
+                        st.error("No spectral columns found in the data.")
+                
+                with col2:
+                    st.subheader("Preprocessed Spectra")
+                    
+                    # Get preprocessed data for visualization (stops before StandardScaler)
+                    if st.session_state.preprocessed_data_viz is not None:
+                        preprocessed_viz = st.session_state.preprocessed_data_viz[:10]
+                        
+                        # Create wavelengths for preprocessed data (assuming same range after RangeCut)
+                        preprocessed_wavelengths = np.linspace(350, 1750, preprocessed_viz.shape[1])
+                        
+                        fig = go.Figure()
+                        
+                        for i in range(min(10, len(preprocessed_viz))):
+                            fig.add_trace(go.Scatter(
+                                x=preprocessed_wavelengths,
+                                y=preprocessed_viz[i],
+                                mode='lines',
+                                name=f'Sample {i+1}',
+                                line=dict(width=1),
+                                opacity=0.7
+                            ))
+                        
+                        fig.update_layout(
+                            title="Preprocessed Spectra (First 10) - After Derivative",
+                            xaxis_title="Wavelength (cm⁻¹)",
+                            yaxis_title="Intensity (After Derivative)",
+                            height=400,
+                            showlegend=True
+                        )
+                        
+                        st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.error("Preprocessed data not available for visualization.")
+                
+                # PREDICTIONS SECTION
+                st.subheader("📊 PLS Predictions")
+                
+                # Auto-run predictions
+                num_spectra = min(100, len(st.session_state.preprocessed_data))
+                subset_data = st.session_state.preprocessed_data[:num_spectra]
+                
+                # Make predictions
+                pls_pred = pls_model.predict(subset_data)
+                
+                # Get target column and actual values
+                target_col = 'Penicillin concentration(P:g/L)'
+                if target_col in st.session_state.data.columns:
+                    ground_truth = st.session_state.data[target_col].values[:len(pls_pred)]
+                    
+                    # Calculate performance metrics
+                    pls_rmse = np.sqrt(mean_squared_error(ground_truth, pls_pred))
+                    pls_mae = mean_absolute_error(ground_truth, pls_pred)
+                    pls_r2 = r2_score(ground_truth, pls_pred)
+                    pls_mse = mean_squared_error(ground_truth, pls_pred)
+                    
+                    # Performance metrics
+                    st.subheader("📈 Performance Metrics")
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        st.metric("RMSE", f"{pls_rmse:.3f} g/L")
+                    with col2:
+                        st.metric("MAE", f"{pls_mae:.3f} g/L")
+                    with col3:
+                        st.metric("R² Score", f"{pls_r2:.3f}")
+                    with col4:
+                        st.metric("MSE", f"{pls_mse:.3f}")
+                    
+                    # Three plots in organized layout
+                    st.subheader("📊 Model Performance Analysis")
+                    
+                    # Calculate residuals
+                    residuals = pls_pred - ground_truth
+                    
+                    # Create three columns for the plots
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        # Prediction vs Actual scatter plot
+                        fig1 = go.Figure()
+                        
+                        # Add scatter plot
+                        fig1.add_trace(go.Scatter(
+                            x=ground_truth,
+                            y=pls_pred,
+                            mode='markers',
+                            name='PLS Predictions',
+                            marker=dict(
+                                color='#2ca02c',
+                                size=8,
+                                opacity=0.7
+                            ),
+                            showlegend=True
+                        ))
+                        
+                        # Add perfect prediction line
+                        min_val = min(min(ground_truth), min(pls_pred))
+                        max_val = max(max(ground_truth), max(pls_pred))
+                        fig1.add_trace(go.Scatter(
+                            x=[min_val, max_val],
+                            y=[min_val, max_val],
+                            mode='lines',
+                            name='Perfect Prediction',
+                            line=dict(color='#1f77b4', dash='dash'),
+                            showlegend=True
+                        ))
+                        
+                        fig1.update_layout(
+                            title="Prediction vs Actual",
+                            xaxis_title="Actual (g/L)",
+                            yaxis_title="Predicted (g/L)",
+                            height=400,
+                            showlegend=True
+                        )
+                        
+                        st.plotly_chart(fig1, use_container_width=True)
+                    
+                    with col2:
+                        # Residuals distribution
+                        fig2 = go.Figure()
+                        fig2.add_trace(go.Histogram(
+                            x=residuals,
+                            nbinsx=20,
+                            name='Residuals',
+                            marker_color='#2ca02c',
+                            opacity=0.7
+                        ))
+                        
+                        fig2.update_layout(
+                            title="Residuals Distribution",
+                            xaxis_title="Residuals (g/L)",
+                            yaxis_title="Frequency",
+                            height=400,
+                            showlegend=False
+                        )
+                        
+                        st.plotly_chart(fig2, use_container_width=True)
+                    
+                    with col3:
+                        # Concentration distribution
+                        fig3 = go.Figure()
+                        
+                        # Add actual concentration distribution
+                        fig3.add_trace(go.Histogram(
+                            x=ground_truth,
+                            nbinsx=20,
+                            name='Actual Concentrations',
+                            marker_color='#2ca02c',
+                            opacity=0.7
+                        ))
+                        
+                        # Add predicted concentration distribution
+                        fig3.add_trace(go.Histogram(
+                            x=pls_pred,
+                            nbinsx=20,
+                            name='Predicted Concentrations',
+                            marker_color='#2ca02c',
+                            opacity=0.7
+                        ))
+                        
+                        fig3.update_layout(
+                            title="Concentration Distribution",
+                            xaxis_title="Penicillin Concentration (g/L)",
+                            yaxis_title="Frequency",
+                            height=400,
+                            showlegend=True
+                        )
+                        
+                        st.plotly_chart(fig3, use_container_width=True)
+                    
+                    # Prediction results table
+                    st.subheader("📈 Prediction Results")
+                    results_df = pd.DataFrame({
+                        'Sample': range(1, len(pls_pred) + 1),
+                        'Actual (g/L)': ground_truth,
+                        'Predicted (g/L)': pls_pred,
+                        'Residual (g/L)': residuals,
+                        'Error (%)': np.abs(residuals / ground_truth * 100)
+                    })
+                    
+                    st.dataframe(results_df, use_container_width=True)
+                    
+                else:
+                    st.error(f"Target column '{target_col}' not found in data.")
+            else:
+                st.error("PLS model not available.")
+        else:
+            st.warning("Please load models and data first.")
+    
+    with tab5:
+        st.header("🟣 MLP+1D-CNN Model - Preprocessing & Predictions")
+        
+        if st.session_state.data is not None and st.session_state.models_loaded:
+            # Load models
+            pipeline, elastic_model, pls_model = load_models()
+            
+            if pipeline is not None:
+                # PREPROCESSING VISUALIZATION
+                st.subheader("🔬 Preprocessing Pipeline")
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.subheader("Raw Raman Spectra")
+                    
+                    # Find spectral columns (numeric columns that represent wavelengths)
+                    numeric_cols = st.session_state.data.select_dtypes(include=[np.number]).columns
+                    spectral_cols = [col for col in numeric_cols if str(col).replace('.', '').isdigit()]
+                    
+                    if len(spectral_cols) > 0:
+                        # Use the actual spectral columns - TRULY RAW DATA
+                        raw_spectra = st.session_state.data[spectral_cols].iloc[:10].copy()
+                        raw_spectra = raw_spectra.fillna(0)
+                        
+                        try:
+                            wavelengths = np.array([float(col) for col in spectral_cols])
+                            # Apply RangeCut: 350-1750 cm⁻¹
+                            mask = (wavelengths >= 350) & (wavelengths <= 1750)
+                            wavelengths = wavelengths[mask]
+                            raw_spectra = raw_spectra.iloc[:, mask]
+                            
+                            # Sort wavelengths in ascending order
+                            sort_indices = np.argsort(wavelengths)
+                            wavelengths = wavelengths[sort_indices]
+                            raw_spectra = raw_spectra.iloc[:, sort_indices]
+                            
+                            # Create plot
+                            fig = go.Figure()
+                            
+                            for i in range(min(10, len(raw_spectra))):
+                                fig.add_trace(go.Scatter(
+                                    x=wavelengths,
+                                    y=raw_spectra.iloc[i].values,
+                                    mode='lines',
+                                    name=f'Sample {i+1}',
+                                    line=dict(width=1),
+                                    opacity=0.7
+                                ))
+                            
+                            fig.update_layout(
+                                title="Raw Raman Spectra (First 10) - 350-1750 cm⁻¹",
+                                xaxis_title="Wavelength (cm⁻¹)",
+                                yaxis_title="Intensity (Raw Counts)",
+                                height=400,
+                                showlegend=True
+                            )
+                            
+                            st.plotly_chart(fig, use_container_width=True)
+                            
+                        except Exception as e:
+                            st.error(f"Error processing raw spectra: {str(e)}")
+                    else:
+                        st.error("No spectral columns found in the data.")
+                
+                with col2:
+                    st.subheader("Preprocessed Spectra")
+                    
+                    # Get preprocessed data for visualization (stops before StandardScaler)
+                    if st.session_state.preprocessed_data_viz is not None:
+                        preprocessed_viz = st.session_state.preprocessed_data_viz[:10]
+                        
+                        # Create wavelengths for preprocessed data (assuming same range after RangeCut)
+                        preprocessed_wavelengths = np.linspace(350, 1750, preprocessed_viz.shape[1])
+                        
+                        fig = go.Figure()
+                        
+                        for i in range(min(10, len(preprocessed_viz))):
+                            fig.add_trace(go.Scatter(
+                                x=preprocessed_wavelengths,
+                                y=preprocessed_viz[i],
+                                mode='lines',
+                                name=f'Sample {i+1}',
+                                line=dict(width=1),
+                                opacity=0.7
+                            ))
+                        
+                        fig.update_layout(
+                            title="Preprocessed Spectra (First 10) - After Derivative",
+                            xaxis_title="Wavelength (cm⁻¹)",
+                            yaxis_title="Intensity (After Derivative)",
+                            height=400,
+                            showlegend=True
+                        )
+                        
+                        st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.error("Preprocessed data not available for visualization.")
+                
+                # PREDICTIONS SECTION
+                st.subheader("📊 MLP+1D-CNN Predictions")
+                
+                # Note: MLP+1D-CNN model is not yet integrated
+                st.info("🔄 **MLP+1D-CNN Model Status: In Development**")
+                st.markdown("""
+                The MLP+1D-CNN model is currently in development and not yet integrated into the prediction pipeline.
+                
+                **Model Architecture:**
+                - **MLP Component**: Multi-layer perceptron for feature learning
+                - **1D-CNN Component**: 1D convolutional neural network for spectral pattern recognition
+                - **Hybrid Approach**: Combines traditional MLP with CNN for enhanced spectral analysis
+                
+                **Expected Features:**
+                - Advanced spectral feature extraction
+                - Improved pattern recognition capabilities
+                - Enhanced prediction accuracy for complex spectral data
+                
+                **Development Status:**
+                - ✅ Model architecture designed
+                - ✅ Training pipeline implemented
+                - 🔄 Integration with web app (in progress)
+                - ⏳ Validation and testing (pending)
+                """)
+                
+                # Placeholder for future predictions
+                st.subheader("📈 Future Performance Metrics")
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    st.metric("RMSE", "TBD", help="To be determined after integration")
+                with col2:
+                    st.metric("MAE", "TBD", help="To be determined after integration")
+                with col3:
+                    st.metric("R² Score", "TBD", help="To be determined after integration")
+                with col4:
+                    st.metric("MSE", "TBD", help="To be determined after integration")
+                
+                # Placeholder plots
+                st.subheader("📊 Model Performance Analysis")
+                st.info("📊 Performance visualizations will be available once the model is fully integrated.")
+                
+                # Development roadmap
+                st.subheader("🚀 Development Roadmap")
+                roadmap_data = {
+                    'Phase': ['Model Training', 'Integration', 'Validation', 'Deployment'],
+                    'Status': ['✅ Complete', '🔄 In Progress', '⏳ Pending', '⏳ Pending'],
+                    'Description': [
+                        'Model architecture and training pipeline completed',
+                        'Integration with web application in progress',
+                        'Model validation and performance testing',
+                        'Production deployment and monitoring'
+                    ]
+                }
+                
+                roadmap_df = pd.DataFrame(roadmap_data)
+                st.dataframe(roadmap_df, use_container_width=True)
+                
+            else:
+                st.error("Preprocessing pipeline not available.")
+        else:
+            st.warning("Please load models and data first.")
+    
+    with tab6:
         st.header("📈 Prediction History")
         
         if st.session_state.prediction_history:
@@ -1118,7 +1536,7 @@ def main():
         else:
             st.info("No prediction history available. Run some predictions to see history here.")
     
-    with tab5:
+    with tab7:
         st.header("⚙️ Settings")
         
         col1, col2 = st.columns(2)
@@ -1173,7 +1591,7 @@ def main():
             st.write(f"- NumPy Version: {np.__version__}")
             st.write(f"- Plotly Version: {plotly.__version__}")
     
-    with tab6:
+    with tab8:
         st.header("🏛️ Model Registry - GMP Compliance")
         st.markdown("**Pharmaceutical Industry Model Versioning & Tracking System**")
         
