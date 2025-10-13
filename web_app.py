@@ -82,18 +82,28 @@ def load_models():
         st.error(f"Error loading models: {str(e)}")
         return None, None, None
 
-@st.cache_data
+# @st.cache_data  # Temporarily disabled to force data reload
 def load_data():
     """Load the spectral data"""
     try:
         data_file = './test_data/test_samples.csv'  # Test data for deployment
-        # Add cache busting - check file modification time
+        # Add cache busting - check file modification time and size
         import os
         file_mtime = os.path.getmtime(data_file) if os.path.exists(data_file) else 0
+        file_size = os.path.getsize(data_file) if os.path.exists(data_file) else 0
         
         if os.path.exists(data_file):
             # Load a subset for demonstration (first 1000 rows)
             data = pd.read_csv(data_file, nrows=1000)
+            
+            # Debug: Show data info
+            target_col = 'Penicillin concentration(P:g/L)'
+            if target_col in data.columns:
+                st.sidebar.write(f"📊 **Data Info:**")
+                st.sidebar.write(f"• Samples: {len(data)}")
+                st.sidebar.write(f"• Range: {data[target_col].min():.3f} - {data[target_col].max():.3f} g/L")
+                st.sidebar.write(f"• Mean: {data[target_col].mean():.3f} g/L")
+                st.sidebar.write(f"• Std: {data[target_col].std():.3f} g/L")
             
             # Only fill NaN values in non-spectral columns, not in the spectral data
             # Find spectral columns (numeric columns that look like wavelengths)
