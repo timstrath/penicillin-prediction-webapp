@@ -152,7 +152,7 @@ def preprocess_data(data, pipeline):
         return None
 
 def preprocess_data_for_visualization(data, pipeline):
-    """Apply preprocessing to the data but stop before final StandardScaler for visualization"""
+    """Apply complete preprocessing pipeline including StandardScaler for visualization"""
     try:
         # Create a copy to avoid modifying the original data
         data_copy = data.copy()
@@ -171,10 +171,10 @@ def preprocess_data_for_visualization(data, pipeline):
             expected_columns = pipeline.feature_names_in_
             data_copy = data_copy[expected_columns]
         
-        # Apply preprocessing steps up to (but not including) the final StandardScaler
+        # Apply ALL preprocessing steps including the final StandardScaler
         # Use the same data structure as training
         current_data = data_copy
-        for step_name, transformer in pipeline.steps[:-1]:  # Skip the last step (StandardScaler)
+        for step_name, transformer in pipeline.steps:  # Include ALL steps including StandardScaler
             current_data = transformer.transform(current_data)
         
         return current_data
