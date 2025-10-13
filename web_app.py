@@ -314,8 +314,7 @@ def prepare_mlp_cnn_data(data):
             # Fallback: use all numeric columns after process data
             spectral_data = data_copy.iloc[:, 39:].values
         
-        # Apply square root transformation to spectral data (as per original training)
-        spectral_data = np.sqrt(np.abs(spectral_data))
+        # No square root transformation on spectral data - that was applied to target during training
         
         # Check if we need to pad or truncate to match model expectations (2200 features)
         expected_spectral_dim = 2200
@@ -1756,11 +1755,13 @@ def main():
                         if process_data is not None and spectral_data is not None:
                             st.info(f"📊 Data prepared: Process data shape: {process_data.shape}, Spectral data shape: {spectral_data.shape}")
                             # Make predictions
-                            mlp_cnn_pred = mlp_cnn_model.predict([process_data, spectral_data]).flatten()
-                            st.info(f"🎯 Predictions generated: {len(mlp_cnn_pred)} samples")
+                            mlp_cnn_pred_raw = mlp_cnn_model.predict([process_data, spectral_data]).flatten()
+                            st.info(f"🎯 Raw predictions generated: {len(mlp_cnn_pred_raw)} samples")
+                            st.info(f"📊 Raw prediction range: {mlp_cnn_pred_raw.min():.3f} - {mlp_cnn_pred_raw.max():.3f}")
                             
-                            # Apply inverse square root transformation
-                            mlp_cnn_pred = mlp_cnn_pred ** 2
+                            # Apply inverse square root transformation (model was trained on sqrt(target))
+                            mlp_cnn_pred = mlp_cnn_pred_raw ** 2
+                            st.info(f"📊 Transformed prediction range: {mlp_cnn_pred.min():.3f} - {mlp_cnn_pred.max():.3f}")
                             
                             # Get ground truth
                             target_col = "Penicillin concentration(P:g/L)"
