@@ -187,40 +187,14 @@ def make_predictions(data, elastic_model, pls_model=None):
     predictions = {}
     
     try:
-        # Debug: Show input data info
-        st.write("🔍 **Debug - Model Input Data:**")
-        st.write(f"Input data shape: {data.shape}")
-        st.write(f"Input data range: {data.min():.3f} - {data.max():.3f}")
-        st.write(f"Input data mean: {data.mean():.3f}")
-        
-        # Debug: Show model info
-        st.write("🔍 **Debug - Model Info:**")
-        st.write(f"ElasticNet model type: {type(elastic_model)}")
-        if pls_model is not None:
-            st.write(f"PLS model type: {type(pls_model)}")
-        else:
-            st.write("PLS model: None")
-        
         # ElasticNet predictions
         elastic_predictions = elastic_model.predict(data)
         predictions['elasticnet'] = elastic_predictions
-        
-        # Debug: Show ElasticNet prediction info
-        st.write("🔍 **Debug - ElasticNet Predictions:**")
-        st.write(f"ElasticNet predictions shape: {elastic_predictions.shape}")
-        st.write(f"ElasticNet predictions range: {elastic_predictions.min():.3f} - {elastic_predictions.max():.3f}")
-        st.write(f"ElasticNet predictions mean: {elastic_predictions.mean():.3f}")
         
         # PLS predictions if model is available
         if pls_model is not None:
             pls_predictions = pls_model.predict(data)
             predictions['pls'] = pls_predictions
-            
-            # Debug: Show PLS prediction info
-            st.write("🔍 **Debug - PLS Predictions:**")
-            st.write(f"PLS predictions shape: {pls_predictions.shape}")
-            st.write(f"PLS predictions range: {pls_predictions.min():.3f} - {pls_predictions.max():.3f}")
-            st.write(f"PLS predictions mean: {pls_predictions.mean():.3f}")
         else:
             predictions['pls'] = None
             
@@ -512,28 +486,9 @@ def main():
                 target_col = 'Penicillin concentration(P:g/L)'
                 ground_truth = st.session_state.data[target_col].values
                 
-                # Debug: Show raw data info
-                st.write("🔍 **Debug - Raw Data Info:**")
-                st.write(f"Raw data shape: {st.session_state.data.shape}")
-                st.write(f"Target column exists: {target_col in st.session_state.data.columns}")
-                st.write(f"Ground truth range: {ground_truth.min():.3f} - {ground_truth.max():.3f}")
-                st.write(f"Ground truth mean: {ground_truth.mean():.3f}")
-                
-                # Debug: Show preprocessed data info
-                st.write("🔍 **Debug - Preprocessed Data Info:**")
-                st.write(f"Preprocessed data shape: {st.session_state.preprocessed_data.shape}")
-                st.write(f"Preprocessed data range: {st.session_state.preprocessed_data.min():.3f} - {st.session_state.preprocessed_data.max():.3f}")
-                st.write(f"Preprocessed data mean: {st.session_state.preprocessed_data.mean():.3f}")
                 
                 # Calculate metrics
                 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-                
-                # Debug: Show prediction ranges
-                st.write("🔍 **Debug - Prediction Ranges:**")
-                st.write(f"ElasticNet predictions: {elasticnet_pred.min():.3f} - {elasticnet_pred.max():.3f}")
-                if pls_pred is not None:
-                    st.write(f"PLS predictions: {pls_pred.min():.3f} - {pls_pred.max():.3f}")
-                st.write(f"Ground truth: {ground_truth.min():.3f} - {ground_truth.max():.3f}")
                 
                 elasticnet_mse = mean_squared_error(ground_truth, elasticnet_pred)
                 elasticnet_mae = mean_absolute_error(ground_truth, elasticnet_pred)
@@ -545,12 +500,6 @@ def main():
                     pls_mae = mean_absolute_error(ground_truth, pls_pred)
                     pls_r2 = r2_score(ground_truth, pls_pred)
                     pls_rmse = np.sqrt(pls_mse)
-                
-                # Debug: Show calculated metrics
-                st.write("🔍 **Debug - Calculated Metrics:**")
-                st.write(f"ElasticNet: RMSE={elasticnet_rmse:.3f}, MAE={elasticnet_mae:.3f}, R²={elasticnet_r2:.3f}")
-                if pls_pred is not None:
-                    st.write(f"PLS: RMSE={pls_rmse:.3f}, MAE={pls_mae:.3f}, R²={pls_r2:.3f}")
                 
                 # Performance metrics table
                 col1, col2 = st.columns(2)
@@ -691,47 +640,6 @@ def main():
                         st.plotly_chart(fig_dist, use_container_width=True)
                     
                     # Performance metrics below the plots
-                    st.subheader("📈 Performance Metrics")
-                    
-                    # Calculate metrics for each model
-                    actual_values = (results_df['ElasticNet_Prediction'] + results_df['PLS_Prediction']) / 2
-                    elasticnet_rmse_actual = np.sqrt(mean_squared_error(actual_values, results_df['ElasticNet_Prediction']))
-                    elasticnet_mae_actual = mean_absolute_error(actual_values, results_df['ElasticNet_Prediction'])
-                    elasticnet_r2_actual = r2_score(actual_values, results_df['ElasticNet_Prediction'])
-                    
-                    pls_rmse_actual = np.sqrt(mean_squared_error(actual_values, results_df['PLS_Prediction']))
-                    pls_mae_actual = mean_absolute_error(actual_values, results_df['PLS_Prediction'])
-                    pls_r2_actual = r2_score(actual_values, results_df['PLS_Prediction'])
-                    
-                    # Display metrics in columns
-                    col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
-                        st.metric("ElasticNet RMSE", f"{elasticnet_rmse_actual:.3f} g/L")
-                        st.metric("ElasticNet MAE", f"{elasticnet_mae_actual:.3f} g/L")
-                        st.metric("ElasticNet R²", f"{elasticnet_r2_actual:.3f}")
-                    
-                    with col2:
-                        st.metric("PLS RMSE", f"{pls_rmse_actual:.3f} g/L")
-                        st.metric("PLS MAE", f"{pls_mae_actual:.3f} g/L")
-                        st.metric("PLS R²", f"{pls_r2_actual:.3f}")
-                    
-                    with col3:
-                        # Determine which model performs better
-                        if elasticnet_rmse_actual < pls_rmse_actual:
-                            st.success("🏆 **ElasticNet** has lower RMSE")
-                        else:
-                            st.success("🏆 **PLS** has lower RMSE")
-                            
-                        if elasticnet_mae_actual < pls_mae_actual:
-                            st.info("📊 **ElasticNet** has lower MAE")
-                        else:
-                            st.info("📊 **PLS** has lower MAE")
-                            
-                        if elasticnet_r2_actual > pls_r2_actual:
-                            st.info("📈 **ElasticNet** has higher R²")
-                        else:
-                            st.info("📈 **PLS** has higher R²")
                 
                 else:
                     # Single model results
