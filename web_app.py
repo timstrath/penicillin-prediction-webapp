@@ -90,25 +90,40 @@ def load_data():
         # Add cache busting - check file modification time
         import os
         file_mtime = os.path.getmtime(data_file) if os.path.exists(data_file) else 0
+        
+        # Debug information
+        st.write(f"🔍 Debug: Looking for data file at: {data_file}")
+        st.write(f"🔍 Debug: File exists: {os.path.exists(data_file)}")
+        
         if os.path.exists(data_file):
+            st.write(f"🔍 Debug: File size: {os.path.getsize(data_file)} bytes")
             # Load a subset for demonstration (first 1000 rows)
             data = pd.read_csv(data_file, nrows=1000)
+            st.write(f"🔍 Debug: Loaded data shape: {data.shape}")
+            
             # Only fill NaN values in non-spectral columns, not in the spectral data
             # Find spectral columns (numeric columns that look like wavelengths)
             numeric_cols = data.select_dtypes(include=[np.number]).columns
             spectral_cols = [col for col in numeric_cols if str(col).replace('.', '').isdigit()]
             non_spectral_cols = [col for col in data.columns if col not in spectral_cols]
             
+            st.write(f"🔍 Debug: Found {len(spectral_cols)} spectral columns")
+            st.write(f"🔍 Debug: Found {len(non_spectral_cols)} non-spectral columns")
+            
             # Only fill NaN in non-spectral columns
             if non_spectral_cols:
                 data[non_spectral_cols] = data[non_spectral_cols].fillna(0)
             
+            st.write(f"🔍 Debug: Data loaded successfully!")
             return data
         else:
             st.error(f"Data file not found: {data_file}")
             return None
     except Exception as e:
         st.error(f"Error loading data: {str(e)}")
+        import traceback
+        st.write(f"🔍 Debug: Full error traceback:")
+        st.code(traceback.format_exc())
         return None
 
 def preprocess_data(data, pipeline):
