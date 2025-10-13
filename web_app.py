@@ -482,8 +482,8 @@ def main():
                 if st.session_state.predictions['pls'] is not None:
                     st.subheader("📊 Model Comparison")
                     
-                    # Two plots in a row: Prediction vs Actual, Distribution (removed Model Agreement)
-                    col1, col2 = st.columns(2)
+                    # Three plots in a row: Prediction vs Actual, Residuals Distribution, Concentration Distribution
+                    col1, col2, col3 = st.columns(3)
                     
                     with col1:
                         # Plot 1: Prediction vs Actual Values
@@ -540,8 +540,54 @@ def main():
                         st.plotly_chart(fig_actual, use_container_width=True)
                     
                     with col2:
-                        # Plot 2: Distribution Comparison
-                        st.subheader("📊 Distribution")
+                        # Plot 2: Residuals Distribution
+                        st.subheader("📊 Residuals Distribution")
+                        
+                        # Calculate residuals
+                        elasticnet_residuals = actual_values - results_df['ElasticNet_Prediction']
+                        pls_residuals = actual_values - results_df['PLS_Prediction']
+                        
+                        fig_residuals = go.Figure()
+                        fig_residuals.add_trace(go.Histogram(
+                            x=elasticnet_residuals,
+                            name='ElasticNet',
+                            opacity=0.7,
+                            nbinsx=15,
+                            marker_color='#ff7f0e'  # Same orange as scatter plot
+                        ))
+                        fig_residuals.add_trace(go.Histogram(
+                            x=pls_residuals,
+                            name='PLS',
+                            opacity=0.7,
+                            nbinsx=15,
+                            marker_color='#2ca02c'  # Same green as scatter plot
+                        ))
+                        
+                        # Add vertical line at zero
+                        fig_residuals.add_vline(x=0, line_dash="dash", line_color="red", 
+                                              annotation_text="Perfect Prediction", 
+                                              annotation_position="top")
+                        
+                        fig_residuals.update_layout(
+                            title="Prediction Errors",
+                            xaxis_title="Residuals (Actual - Predicted) g/L",
+                            yaxis_title="Frequency",
+                            height=400,
+                            barmode='overlay',
+                            showlegend=True,
+                            legend=dict(
+                                yanchor="top",
+                                y=0.99,
+                                xanchor="left",
+                                x=0.01
+                            )
+                        )
+                        
+                        st.plotly_chart(fig_residuals, use_container_width=True)
+                    
+                    with col3:
+                        # Plot 3: Concentration Distribution
+                        st.subheader("📊 Concentration Distribution")
                         fig_dist = go.Figure()
                         fig_dist.add_trace(go.Histogram(
                             x=results_df['ElasticNet_Prediction'],
