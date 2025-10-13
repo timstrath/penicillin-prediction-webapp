@@ -240,6 +240,10 @@ def main():
             else:
                 st.error("❌ Models Not Loaded")
     
+    # Initialize active tab in session state
+    if 'active_tab' not in st.session_state:
+        st.session_state.active_tab = 1  # Default to Results & Predictions tab
+    
     # Main tabs
     tab1, tab2, tab3, tab4 = st.tabs([
         "🔬 Preprocessing", 
@@ -412,30 +416,32 @@ def main():
             
             with col2:
                 st.write("")  # Spacing
-                if st.button("🚀 Run Predictions", type="primary"):
-                    with st.spinner("Making predictions..."):
-                        # Get models
-                        pipeline, elastic_model, pls_model = load_models()
-                        
-                        # Select subset of data
-                        subset_data = st.session_state.preprocessed_data[:num_spectra]
-                        
-                        # Make predictions
-                        predictions = make_predictions(subset_data, elastic_model, pls_model)
-                        
-                        if predictions:
-                            st.session_state.predictions = predictions
+                # Use form to prevent tab switching
+                with st.form("prediction_form"):
+                    if st.form_submit_button("🚀 Run Predictions", type="primary"):
+                        with st.spinner("Making predictions..."):
+                            # Get models
+                            pipeline, elastic_model, pls_model = load_models()
                             
-                            # Store in history
-                            history_entry = {
-                                'timestamp': datetime.now(),
-                                'num_spectra': num_spectra,
-                                'elasticnet_rmse': np.sqrt(np.mean((predictions['elasticnet'] - predictions['elasticnet'])**2)) if predictions['elasticnet'] is not None else None,
-                                'pls_rmse': np.sqrt(np.mean((predictions['pls'] - predictions['pls'])**2)) if predictions['pls'] is not None else None
-                            }
-                            st.session_state.prediction_history.append(history_entry)
+                            # Select subset of data
+                            subset_data = st.session_state.preprocessed_data[:num_spectra]
                             
-                            st.success(f"✅ Predictions completed for {num_spectra} spectra!")
+                            # Make predictions
+                            predictions = make_predictions(subset_data, elastic_model, pls_model)
+                            
+                            if predictions:
+                                st.session_state.predictions = predictions
+                                
+                                # Store in history
+                                history_entry = {
+                                    'timestamp': datetime.now(),
+                                    'num_spectra': num_spectra,
+                                    'elasticnet_rmse': np.sqrt(np.mean((predictions['elasticnet'] - predictions['elasticnet'])**2)) if predictions['elasticnet'] is not None else None,
+                                    'pls_rmse': np.sqrt(np.mean((predictions['pls'] - predictions['pls'])**2)) if predictions['pls'] is not None else None
+                                }
+                                st.session_state.prediction_history.append(history_entry)
+                                
+                                st.success(f"✅ Predictions completed for {num_spectra} spectra!")
             
             with col3:
                 st.write("")  # Spacing
