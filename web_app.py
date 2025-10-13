@@ -248,6 +248,9 @@ def main():
         index=0  # Default to Results & Predictions
     )
     
+    # Debug: Show selected page
+    st.sidebar.write(f"Selected: {page}")
+    
     # Main content based on selected page
     if page == "🔬 Preprocessing":
         st.header("🔬 Preprocessing Visualization")
