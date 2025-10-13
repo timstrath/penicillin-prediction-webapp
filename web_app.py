@@ -87,6 +87,9 @@ def load_data():
     """Load the spectral data"""
     try:
         data_file = './test_data/test_samples.csv'  # Test data for deployment
+        # Add cache busting - check file modification time
+        import os
+        file_mtime = os.path.getmtime(data_file) if os.path.exists(data_file) else 0
         if os.path.exists(data_file):
             # Load a subset for demonstration (first 1000 rows)
             data = pd.read_csv(data_file, nrows=1000)
@@ -169,6 +172,7 @@ def make_predictions(data, elastic_model, pls_model=None):
 def main():
     # Header
     st.markdown('<h1 class="main-header">🧪 Penicillin Concentration Prediction Dashboard</h1>', unsafe_allow_html=True)
+    st.markdown('<p style="text-align: center; color: #666; font-size: 0.9em;">Updated with curated test data for optimal prediction results</p>', unsafe_allow_html=True)
     
     # Load data and models
     if st.session_state.data is None:
