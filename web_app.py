@@ -308,7 +308,10 @@ def main():
                     # Model version information from database
                     st.markdown("**📋 Model Versions (Live from Registry):**")
                     for model_name, version, created_at, status in registry_info['models']:
-                        st.info(f"• **{model_name}**: {version} ({status})")
+                        if status == 'In Development':
+                            st.warning(f"• **{model_name}**: {version} ({status})")
+                        else:
+                            st.info(f"• **{model_name}**: {version} ({status})")
                     
                     # Validation status from database
                     st.markdown("**✅ Validation Status:**")
@@ -335,7 +338,7 @@ def main():
                     st.markdown("**📋 Model Versions:**")
                     st.info("• **ElasticNet**: v1.2.0 (Validated)")
                     st.info("• **PLS**: v1.1.0 (Validated)")
-                    st.info("• **MLP+1D-CNN**: v1.0.0 (In Development)")
+                    st.warning("• **MLP+1D-CNN**: v1.0.0 (In Development)")
                     
                     # Model registry database status
                     st.markdown("**📊 Model Registry Database Status:**")
