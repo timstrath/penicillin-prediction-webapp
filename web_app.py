@@ -875,7 +875,7 @@ def main():
                                 showlegend=True
                             )
                             
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.plotly_chart(fig, use_container_width=True, key="raw_spectra_original")
                             
                         except Exception as e:
                             st.error(f"Error processing raw spectra: {str(e)}")
@@ -912,7 +912,7 @@ def main():
                             showlegend=True
                         )
                         
-                        st.plotly_chart(fig, use_container_width=True)
+                        st.plotly_chart(fig, use_container_width=True, key="preprocessed_spectra_original")
                     else:
                         st.error("Preprocessed data not available for visualization.")
                 
@@ -1129,7 +1129,7 @@ def main():
                                 showlegend=True
                             )
                             
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.plotly_chart(fig, use_container_width=True, key="preprocessed_spectra_original")
                             
                         except Exception as e:
                             st.error(f"Error processing raw spectra: {str(e)}")
@@ -1166,7 +1166,7 @@ def main():
                             showlegend=True
                         )
                         
-                        st.plotly_chart(fig, use_container_width=True)
+                        st.plotly_chart(fig, use_container_width=True, key="raw_spectra_elasticnet")
                     else:
                         st.error("Preprocessed data not available for visualization.")
                 
@@ -1383,7 +1383,7 @@ def main():
                                 showlegend=True
                             )
                             
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.plotly_chart(fig, use_container_width=True, key="preprocessed_spectra_elasticnet")
                             
                         except Exception as e:
                             st.error(f"Error processing raw spectra: {str(e)}")
@@ -1420,7 +1420,7 @@ def main():
                             showlegend=True
                         )
                         
-                        st.plotly_chart(fig, use_container_width=True)
+                        st.plotly_chart(fig, use_container_width=True, key="raw_spectra_pls")
                     else:
                         st.error("Preprocessed data not available for visualization.")
                 
