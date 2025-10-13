@@ -608,30 +608,6 @@ def main():
                 # 3. PREDICTION TABLE (BOTTOM)
                 st.subheader("📈 Prediction Results")
                 st.dataframe(results_df, use_container_width=True)
-                
-                else:
-                    # Single model results
-                    st.subheader("📊 ElasticNet Predictions")
-                    
-                    fig_single = go.Figure()
-                    fig_single.add_trace(go.Histogram(
-                        x=results_df['ElasticNet_Prediction'],
-                        name='ElasticNet Predictions',
-                        nbinsx=20
-                    ))
-                    
-                    fig_single.update_layout(
-                        title="ElasticNet Prediction Distribution",
-                        xaxis_title="Concentration (g/L)",
-                        yaxis_title="Frequency",
-                        height=400
-                    )
-                    
-                    st.plotly_chart(fig_single, use_container_width=True)
-                
-                # 3. PREDICTION TABLE (BOTTOM)
-                st.subheader("📈 Prediction Results")
-                st.dataframe(results_df, use_container_width=True)
         
         else:
             st.warning("Please load models and data first.")
