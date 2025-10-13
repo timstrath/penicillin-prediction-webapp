@@ -250,6 +250,48 @@ def main():
             else:
                 st.error("❌ Models Not Loaded")
     
+    # Custom CSS for better tab visibility
+    st.markdown("""
+    <style>
+    /* Make tabs more visible and contrastive */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 2px;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        white-space: pre-wrap;
+        background-color: #f0f2f6;
+        border-radius: 8px 8px 0px 0px;
+        border: 2px solid #e1e5e9;
+        color: #262730;
+        font-weight: 600;
+        font-size: 16px;
+        padding: 10px 20px;
+        margin: 0px 2px;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background-color: #ff4b4b;
+        color: white;
+        border: 2px solid #ff4b4b;
+        font-weight: 700;
+        box-shadow: 0 2px 4px rgba(255, 75, 75, 0.3);
+    }
+    
+    .stTabs [data-baseweb="tab"]:hover {
+        background-color: #ff6b6b;
+        color: white;
+        border: 2px solid #ff6b6b;
+    }
+    
+    .stTabs [aria-selected="true"]:hover {
+        background-color: #ff3333;
+        border: 2px solid #ff3333;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
     # Main tabs
     tab1, tab2, tab3, tab4 = st.tabs([
         "🔬 Preprocessing", 
@@ -638,22 +680,6 @@ def main():
                     pls_mae = mean_absolute_error(ground_truth, pls_pred)
                     pls_r2 = r2_score(ground_truth, pls_pred)
                     pls_rmse = np.sqrt(pls_mse)
-                
-                # Debug: Show data statistics to understand R² scores
-                st.write("🔍 **Debug Info:**")
-                st.write(f"**Ground Truth Range:** {ground_truth.min():.3f} - {ground_truth.max():.3f} g/L")
-                st.write(f"**Ground Truth Mean:** {ground_truth.mean():.3f} g/L")
-                st.write(f"**Ground Truth Std:** {ground_truth.std():.3f} g/L")
-                st.write(f"**ElasticNet Predictions Range:** {elasticnet_pred.min():.3f} - {elasticnet_pred.max():.3f} g/L")
-                if pls_pred is not None:
-                    st.write(f"**PLS Predictions Range:** {pls_pred.min():.3f} - {pls_pred.max():.3f} g/L")
-                
-                # Calculate variance of ground truth (needed for R² interpretation)
-                ground_truth_var = np.var(ground_truth)
-                st.write(f"**Ground Truth Variance:** {ground_truth_var:.3f}")
-                st.write(f"**ElasticNet MSE vs Variance:** {elasticnet_mse:.3f} vs {ground_truth_var:.3f}")
-                if pls_pred is not None:
-                    st.write(f"**PLS MSE vs Variance:** {pls_mse:.3f} vs {ground_truth_var:.3f}")
                 
                 # Performance metrics table
                 col1, col2 = st.columns(2)
