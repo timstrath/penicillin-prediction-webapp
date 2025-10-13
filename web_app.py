@@ -368,9 +368,7 @@ def main():
                     if np.count_nonzero(y_values) == 0:
                         continue
                     
-                    # Normalize the data for better visualization
-                    if np.max(y_values) > 0:
-                        y_values = (y_values - np.min(y_values)) / (np.max(y_values) - np.min(y_values))
+                    # Keep raw data as-is (no normalization for raw spectra)
                     
                     fig_raw.add_trace(go.Scatter(
                         x=wavelengths,
@@ -388,7 +386,7 @@ def main():
                     fig_raw.update_layout(
                         title="Raw Raman Spectra (First 10) - 350-1750 cm⁻¹",
                         xaxis_title="Wavelength (cm⁻¹)",
-                        yaxis_title="Intensity (Raw)",
+                        yaxis_title="Intensity (Raw Counts)",
                         height=400,
                         showlegend=False
                     )
