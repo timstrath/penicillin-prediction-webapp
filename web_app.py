@@ -284,8 +284,8 @@ def preprocess_data_for_visualization(data, pipeline):
         st.error(f"Error in preprocessing for visualization: {str(e)}")
         return None
 
-def prepare_mlp_cnn_data(data, pipeline):
-    """Prepare data for MLP+1D-CNN model using the same preprocessing pipeline"""
+def prepare_mlp_cnn_data(data):
+    """Prepare data for MLP+1D-CNN model using the original training preprocessing"""
     try:
         # Create a copy to avoid modifying the original data
         data_copy = data.copy()
@@ -297,23 +297,27 @@ def prepare_mlp_cnn_data(data, pipeline):
         for col in data_copy.select_dtypes(include=['object']).columns:
             data_copy[col] = pd.to_numeric(data_copy[col], errors='coerce').fillna(0)
         
-        # Ensure the data has the exact same column order as the pipeline expects
-        if hasattr(pipeline, 'feature_names_in_'):
-            # Reorder columns to match pipeline expectations
-            expected_columns = pipeline.feature_names_in_
-            data_copy = data_copy[expected_columns]
-        
-        # Apply the same preprocessing pipeline as other models
-        preprocessed_data = pipeline.transform(data_copy)
-        
-        # Separate process and spectral data from preprocessed data
+        # Separate process and spectral data (as per original training)
         # Process data: first 39 columns (based on metadata)
-        process_data = preprocessed_data[:, :39]
+        process_data = data_copy.iloc[:, :39].values
         
-        # Spectral data: remaining columns (use actual shape, not expected 2200)
-        spectral_data = preprocessed_data[:, 39:]
+        # Get spectral columns (numeric columns that look like wavelengths)
+        numeric_cols = data_copy.select_dtypes(include=[np.number]).columns
+        spectral_cols = [col for col in numeric_cols if str(col).replace('.', '').isdigit()]
         
-        # Check if we need to pad or truncate to match model expectations
+        # Apply RangeCut (350-1750 cm⁻¹) - same as original training
+        if spectral_cols:
+            wavelengths = [float(col) for col in spectral_cols]
+            valid_cols = [col for col, wl in zip(spectral_cols, wavelengths) if 350 <= wl <= 1750]
+            spectral_data = data_copy[valid_cols].values
+        else:
+            # Fallback: use all numeric columns after process data
+            spectral_data = data_copy.iloc[:, 39:].values
+        
+        # Apply square root transformation to spectral data (as per original training)
+        spectral_data = np.sqrt(np.abs(spectral_data))
+        
+        # Check if we need to pad or truncate to match model expectations (2200 features)
         expected_spectral_dim = 2200
         actual_spectral_dim = spectral_data.shape[1]
         
@@ -1747,7 +1751,7 @@ def main():
                     st.success("✅ MLP+1D-CNN model loaded successfully!")
                     try:
                         # Prepare data for MLP+1D-CNN
-                        process_data, spectral_data = prepare_mlp_cnn_data(st.session_state.data, pipeline)
+                        process_data, spectral_data = prepare_mlp_cnn_data(st.session_state.data)
                         
                         if process_data is not None and spectral_data is not None:
                             st.info(f"📊 Data prepared: Process data shape: {process_data.shape}, Spectral data shape: {spectral_data.shape}")
