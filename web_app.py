@@ -1554,48 +1554,15 @@ def main():
                     """)
                 
                 with arch_col2:
-                    # Create an impressive architecture visualization
-                    try:
-                        import visualkeras
-                        from PIL import ImageFont
-                        
-                        if mlp_cnn_model is not None:
-                            # Create a temporary visualization
-                            import tempfile
-                            import os
-                            
-                            # Create visualization with enhanced styling
-                            visualkeras.layered_view(
-                                mlp_cnn_model,
-                                to_file='temp_model_architecture.png',
-                                legend=True,
-                                font=ImageFont.load_default(),
-                                spacing=30,
-                                draw_volume=True,
-                                draw_volume_filled=True,
-                                color_map='Set3',
-                                background_fill='white',
-                                layer_fill='lightblue',
-                                padding=20
-                            )
-                            
-                            # Display the image
-                            if os.path.exists('temp_model_architecture.png'):
-                                st.image('temp_model_architecture.png', caption='🏗️ MLP+1D-CNN Architecture Visualization', use_column_width=True)
-                                # Clean up
-                                os.remove('temp_model_architecture.png')
-                            else:
-                                st.info("🔄 Architecture visualization will be available when model is loaded.")
-                        else:
-                            # Show an enhanced placeholder architecture diagram
-                            st.info("🔄 **Architecture Preview:**")
-                            
-                            # Create a clean, professional architecture diagram
-                            st.markdown("""
-                            <div style="font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; line-height: 1.4;">
-                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 20px;">
-                                <h3 style="margin: 0; font-size: 18px;">🏗️ MLP+1D-CNN Hybrid Architecture</h3>
-                            </div>
+                    # Show the architecture overview (always display this)
+                    st.info("📊 **Architecture Overview:**")
+                    
+                    # Create a clean, professional architecture diagram
+                    st.markdown("""
+                    <div style="font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; line-height: 1.4;">
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 20px;">
+                        <h3 style="margin: 0; font-size: 18px;">🏗️ MLP+1D-CNN Hybrid Architecture</h3>
+                    </div>
                             
                             <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
                                 <div style="flex: 1; margin-right: 10px;">
@@ -1669,36 +1636,6 @@ def main():
                             </div>
                             </div>
                             """, unsafe_allow_html=True)
-                            
-                    except ImportError:
-                        st.info("📊 **Architecture Summary:**")
-                        st.markdown("""
-                        **🏗️ Hybrid Neural Network Architecture:**
-                        
-                        **🔀 Dual-Branch Design:**
-                        - **MLP Branch**: Processes 39 process variables
-                        - **1D-CNN Branch**: Analyzes 2200 spectral features
-                        
-                        **🧠 Advanced Features:**
-                        - **Batch Normalization**: Stabilizes training
-                        - **Dropout Regularization**: Prevents overfitting
-                        - **Fusion Architecture**: Combines both data types
-                        - **Square Root Transform**: Improves prediction stability
-                        
-                        **⚡ Performance Benefits:**
-                        - Captures non-linear relationships
-                        - Handles spectral noise robustly
-                        - Optimized for pharmaceutical data
-                        """)
-                    except Exception as e:
-                        st.info("📊 **Architecture Overview:**")
-                        st.markdown(f"""
-                        **MLP+1D-CNN Hybrid Model:**
-                        - **Input**: 39 process variables + 2200 spectral features
-                        - **Architecture**: Dual-branch neural network
-                        - **Output**: Penicillin concentration prediction
-                        - **Performance**: R² = 0.990, RMSE = 0.967 g/L
-                        """)
                 
                 # MODEL SUMMARY SECTION
                 st.subheader("📈 Model Summary & Performance")
