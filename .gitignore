@@ -1,5 +1,6 @@
 # Data files (too large for GitHub)
 data_2000_samples/
+Mendeley_data/
 *.h5
 *.pkl
 
@@ -17,8 +18,24 @@ __pycache__/
 *.pyd
 .Python
 
-# Jupyter Notebook
+# Jupyter Notebooks (exclude large notebooks)
+*.ipynb
 .ipynb_checkpoints/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Development/utility scripts (keep main app files)
+create_*.py
+debug_*.py
+test_*.py
+*_clean.py
+*_simple.py
+populate_*.py
+integrate_*.py
+add_*.py
 
 # Environment
 .env

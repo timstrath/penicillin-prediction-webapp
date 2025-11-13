@@ -40,7 +40,13 @@ def check_files():
         "web_app.py",
         "app/models/preprocessing_pipeline.pkl",
         "app/models/elasticnet_penicillin.pkl",
-        "app/Mendeley_data/100_Batches_IndPenSim_V3.csv"
+        "test_data/test_samples.csv"  # Updated to match what web_app.py actually uses
+    ]
+    
+    # Optional files (warn but don't fail)
+    optional_files = [
+        "app/models/pls_penicillin.pkl",
+        "app/models/best_sqrt_hybrid_5000_samples.h5"
     ]
     
     missing_files = []
@@ -53,6 +59,18 @@ def check_files():
         for file_path in missing_files:
             print(f"   - {file_path}")
         return False
+    
+    # Check optional files and warn if missing
+    missing_optional = []
+    for file_path in optional_files:
+        if not os.path.exists(file_path):
+            missing_optional.append(file_path)
+    
+    if missing_optional:
+        print("⚠️  Optional files not found (app will work but some features may be limited):")
+        for file_path in missing_optional:
+            print(f"   - {file_path}")
+        print("   (This is okay - the app will use available models)")
     
     return True
 
