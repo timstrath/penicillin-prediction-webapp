@@ -46,6 +46,20 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Plotly configuration to suppress deprecation warnings
+PLOTLY_CONFIG = {
+    'displayModeBar': True,
+    'displaylogo': False,
+    'modeBarButtonsToRemove': [],
+    'toImageButtonOptions': {
+        'format': 'png',
+        'filename': 'plot',
+        'height': 500,
+        'width': 700,
+        'scale': 1
+    }
+}
+
 # Initialize session state
 if 'data' not in st.session_state:
     st.session_state.data = None
@@ -66,8 +80,48 @@ def load_models():
     """Load the trained models and preprocessing pipeline"""
     try:
         models_dir = "app/models"  # Updated path to app/models
-        pipeline = joblib.load(os.path.join(models_dir, "preprocessing_pipeline.pkl"))
-        elastic_model = joblib.load(os.path.join(models_dir, "elasticnet_penicillin.pkl"))
+        
+        # Load pipeline with validation
+        pipeline_path = os.path.join(models_dir, "preprocessing_pipeline.pkl")
+        if not os.path.exists(pipeline_path):
+            st.error(f"Pipeline file not found: {pipeline_path}")
+            return None, None, None, None
+        
+        pipeline = joblib.load(pipeline_path)
+        
+        # Validate pipeline is fitted
+        if pipeline is None:
+            st.error("Pipeline loaded as None")
+            return None, None, None, None
+        
+        # Check if pipeline has steps
+        if not hasattr(pipeline, 'steps') or len(pipeline.steps) == 0:
+            st.error("Pipeline has no steps - pipeline may not be properly saved")
+            return None, None, None, None
+        
+        # Try to validate pipeline is fitted by checking if it has feature_names_in_ or by attempting a test transform
+        try:
+            # Check if pipeline has been fitted (fitted pipelines have feature_names_in_)
+            if not hasattr(pipeline, 'feature_names_in_'):
+                st.warning("Pipeline may not be fitted - missing feature_names_in_ attribute")
+                # Try a test to see if it works
+                import warnings
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    # This will fail if not fitted, but we catch it
+                    pass
+        except Exception as validation_error:
+            st.error(f"Pipeline validation failed: {str(validation_error)}")
+            st.error("The pipeline may not have been fitted when saved. Please retrain and save the pipeline.")
+            return None, None, None, None
+        
+        # Load ElasticNet model
+        elastic_path = os.path.join(models_dir, "elasticnet_penicillin.pkl")
+        if not os.path.exists(elastic_path):
+            st.error(f"ElasticNet model file not found: {elastic_path}")
+            return None, None, None, None
+        
+        elastic_model = joblib.load(elastic_path)
         
         # Try to load PLS model if available
         pls_model = None
@@ -119,9 +173,20 @@ def load_models():
             print(f"⚠️  Error loading MLP+1D-CNN model: {str(e)}")
             print(f"⚠️  Error type: {type(e).__name__}")
         
+        # Final validation - ensure we have at least pipeline and elastic model
+        if pipeline is None or elastic_model is None:
+            st.error("Failed to load required models (pipeline or ElasticNet)")
+            return None, None, None, None
+        
         return pipeline, elastic_model, pls_model, mlp_cnn_model
+    except FileNotFoundError as e:
+        st.error(f"Model file not found: {str(e)}")
+        st.error("Please ensure model files are in the app/models/ directory")
+        return None, None, None, None
     except Exception as e:
         st.error(f"Error loading models: {str(e)}")
+        import traceback
+        st.error(f"Full error: {traceback.format_exc()}")
         return None, None, None, None
 
 # @st.cache_data  # Temporarily disabled to force data reload
@@ -228,6 +293,16 @@ def get_model_registry_info():
 def preprocess_data(data, pipeline):
     """Apply preprocessing to the data"""
     try:
+        # Check if pipeline is available and properly initialized
+        if pipeline is None:
+            st.error("Pipeline is None. Cannot preprocess data.")
+            return None
+        
+        # Check if pipeline is fitted
+        if not hasattr(pipeline, 'steps') or len(pipeline.steps) == 0:
+            st.error("Pipeline is not properly initialized")
+            return None
+        
         # Create a copy to avoid modifying the original data
         data_copy = data.copy()
         
@@ -243,6 +318,11 @@ def preprocess_data(data, pipeline):
         if hasattr(pipeline, 'feature_names_in_'):
             # Reorder columns to match pipeline expectations
             expected_columns = pipeline.feature_names_in_
+            # Check if all expected columns exist
+            missing_cols = set(expected_columns) - set(data_copy.columns)
+            if missing_cols:
+                st.error(f"Missing columns in data: {missing_cols}")
+                return None
             data_copy = data_copy[expected_columns]
         
         # Apply the preprocessing pipeline to the entire dataset
@@ -251,37 +331,31 @@ def preprocess_data(data, pipeline):
         return preprocessed
     except Exception as e:
         st.error(f"Error in preprocessing: {str(e)}")
+        import traceback
+        st.error(f"Traceback: {traceback.format_exc()}")
         return None
 
 def preprocess_data_for_visualization(data, pipeline):
-    """Apply preprocessing up to derivative step (before StandardScaler) for more informative visualization"""
+    """Apply preprocessing for visualization - uses full pipeline for reliability"""
     try:
-        # Create a copy to avoid modifying the original data
-        data_copy = data.copy()
+        # Check if pipeline is available and properly initialized
+        if pipeline is None:
+            st.error("Pipeline is None. Cannot preprocess data for visualization.")
+            return None
         
-        # Fill ALL NaN values with 0 (same as training data)
-        data_copy = data_copy.fillna(0)
+        # Check if pipeline is fitted
+        if not hasattr(pipeline, 'steps') or len(pipeline.steps) == 0:
+            st.error("Pipeline is not properly initialized")
+            return None
         
-        # Ensure all data is numeric (convert any non-numeric columns)
-        for col in data_copy.columns:
-            if data_copy[col].dtype == 'object':
-                data_copy[col] = pd.to_numeric(data_copy[col], errors='coerce').fillna(0)
+        # Use the same preprocessing as the main function for consistency
+        # This ensures the pipeline is used correctly and all transformers are fitted
+        return preprocess_data(data, pipeline)
         
-        # Ensure the data has the exact same column order as the pipeline expects
-        if hasattr(pipeline, 'feature_names_in_'):
-            # Reorder columns to match pipeline expectations
-            expected_columns = pipeline.feature_names_in_
-            data_copy = data_copy[expected_columns]
-        
-        # Apply preprocessing steps up to (but not including) the final StandardScaler
-        # Use the same data structure as training
-        current_data = data_copy
-        for step_name, transformer in pipeline.steps[:-1]:  # Skip the last step (StandardScaler)
-            current_data = transformer.transform(current_data)
-        
-        return current_data
     except Exception as e:
         st.error(f"Error in preprocessing for visualization: {str(e)}")
+        import traceback
+        st.error(f"Traceback: {traceback.format_exc()}")
         return None
 
 def prepare_mlp_cnn_data(data, pipeline):
@@ -605,7 +679,7 @@ def main():
                         showlegend=False
                     )
                 
-                st.plotly_chart(fig_raw, use_container_width=True)
+                st.plotly_chart(fig_raw, width='stretch', config=PLOTLY_CONFIG)
             
             with col2:
                 st.subheader("Preprocessed Spectra")
@@ -646,7 +720,7 @@ def main():
                         showlegend=False
                     )
                 
-                    st.plotly_chart(fig_processed, use_container_width=True)
+                    st.plotly_chart(fig_processed, width='stretch', config=PLOTLY_CONFIG)
             
             # Preprocessing steps info
             st.subheader("📋 Preprocessing Steps Applied")
@@ -780,7 +854,7 @@ def main():
                             )
                         )
                         
-                        st.plotly_chart(fig_actual, use_container_width=True)
+                        st.plotly_chart(fig_actual, width='stretch', config=PLOTLY_CONFIG)
                     
                     with col2:
                         # Plot 2: Residuals Distribution
@@ -826,7 +900,7 @@ def main():
                             )
                         )
                         
-                        st.plotly_chart(fig_residuals, use_container_width=True)
+                        st.plotly_chart(fig_residuals, width='stretch', config=PLOTLY_CONFIG)
                     
                     with col3:
                         # Plot 3: Concentration Distribution
@@ -862,7 +936,7 @@ def main():
                             )
                         )
                         
-                        st.plotly_chart(fig_dist, use_container_width=True)
+                        st.plotly_chart(fig_dist, width='stretch', config=PLOTLY_CONFIG)
                 
                 # 2. MODEL PERFORMANCE COMPARISON (MIDDLE)
                 st.subheader("📊 Model Performance Comparison")
@@ -903,7 +977,7 @@ def main():
                 
                 # 3. PREDICTION TABLE (BOTTOM)
                 st.subheader("📈 Prediction Results")
-                st.dataframe(results_df, use_container_width=True)
+                st.dataframe(results_df, width='stretch')
         
         else:
             st.warning("Please load models and data first.")
@@ -1049,7 +1123,7 @@ def main():
                                 showlegend=True
                             )
                             
-                            st.plotly_chart(fig, use_container_width=True, key="raw_spectra_original")
+                            st.plotly_chart(fig, width='stretch', config=PLOTLY_CONFIG, key="raw_spectra_original")
                             
                         except Exception as e:
                             st.error(f"Error processing raw spectra: {str(e)}")
@@ -1086,160 +1160,163 @@ def main():
                             showlegend=True
                         )
                         
-                        st.plotly_chart(fig, use_container_width=True, key="preprocessed_spectra_original")
+                        st.plotly_chart(fig, width='stretch', config=PLOTLY_CONFIG, key="preprocessed_spectra_original")
                     else:
                         st.error("Preprocessed data not available for visualization.")
                 
                 # PREDICTIONS SECTION
                 st.subheader("📊 ElasticNet Predictions")
                 
-                # Auto-run predictions
-                num_spectra = min(100, len(st.session_state.preprocessed_data))
-                subset_data = st.session_state.preprocessed_data[:num_spectra]
-                
-                # Make predictions
-                elasticnet_pred = elastic_model.predict(subset_data)
-                
-                # Get target column and actual values
-                target_col = 'Penicillin concentration(P:g/L)'
-                if target_col in st.session_state.data.columns:
-                    ground_truth = st.session_state.data[target_col].values[:len(elasticnet_pred)]
-                    
-                    # Calculate performance metrics
-                    elasticnet_rmse = np.sqrt(mean_squared_error(ground_truth, elasticnet_pred))
-                    elasticnet_mae = mean_absolute_error(ground_truth, elasticnet_pred)
-                    elasticnet_r2 = r2_score(ground_truth, elasticnet_pred)
-                    elasticnet_mse = mean_squared_error(ground_truth, elasticnet_pred)
-                    
-                    # Performance metrics
-                    st.subheader("📈 Performance Metrics")
-                    col1, col2, col3, col4 = st.columns(4)
-                    
-                    with col1:
-                        st.metric("RMSE", f"{elasticnet_rmse:.3f} g/L")
-                    with col2:
-                        st.metric("MAE", f"{elasticnet_mae:.3f} g/L")
-                    with col3:
-                        st.metric("R² Score", f"{elasticnet_r2:.3f}")
-                    with col4:
-                        st.metric("MSE", f"{elasticnet_mse:.3f}")
-                    
-                    # Three plots in organized layout
-                    st.subheader("📊 Model Performance Analysis")
-                    
-                    # Calculate residuals
-                    residuals = elasticnet_pred - ground_truth
-                    
-                    # Create three columns for the plots
-                    col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
-                        # Prediction vs Actual scatter plot
-                        fig1 = go.Figure()
-                        
-                        # Add scatter plot
-                        fig1.add_trace(go.Scatter(
-                            x=ground_truth,
-                            y=elasticnet_pred,
-                            mode='markers',
-                            name='ElasticNet Predictions',
-                            marker=dict(
-                                color='#d62728',
-                                size=8,
-                                opacity=0.7
-                            ),
-                            showlegend=True
-                        ))
-                        
-                        # Add perfect prediction line
-                        min_val = min(min(ground_truth), min(elasticnet_pred))
-                        max_val = max(max(ground_truth), max(elasticnet_pred))
-                        fig1.add_trace(go.Scatter(
-                            x=[min_val, max_val],
-                            y=[min_val, max_val],
-                            mode='lines',
-                            name='Perfect Prediction',
-                            line=dict(color='#1f77b4', dash='dash'),
-                            showlegend=True
-                        ))
-                        
-                        fig1.update_layout(
-                            title="Prediction vs Actual",
-                            xaxis_title="Actual (g/L)",
-                            yaxis_title="Predicted (g/L)",
-                            height=400,
-                            showlegend=True
-                        )
-                        
-                        st.plotly_chart(fig1, use_container_width=True)
-                    
-                    with col2:
-                        # Residuals distribution
-                        fig2 = go.Figure()
-                        fig2.add_trace(go.Histogram(
-                            x=residuals,
-                            nbinsx=20,
-                            name='Residuals',
-                            marker_color='#d62728',
-                            opacity=0.7
-                        ))
-                        
-                        fig2.update_layout(
-                            title="Residuals Distribution",
-                            xaxis_title="Residuals (g/L)",
-                            yaxis_title="Frequency",
-                            height=400,
-                            showlegend=False
-                        )
-                        
-                        st.plotly_chart(fig2, use_container_width=True)
-                    
-                    with col3:
-                        # Concentration distribution
-                        fig3 = go.Figure()
-                        
-                        # Add actual concentration distribution
-                        fig3.add_trace(go.Histogram(
-                            x=ground_truth,
-                            nbinsx=20,
-                            name='Actual Concentrations',
-                            marker_color='#2ca02c',
-                            opacity=0.7
-                        ))
-                        
-                        # Add predicted concentration distribution
-                        fig3.add_trace(go.Histogram(
-                            x=elasticnet_pred,
-                            nbinsx=20,
-                            name='Predicted Concentrations',
-                            marker_color='#d62728',
-                            opacity=0.7
-                        ))
-                        
-                        fig3.update_layout(
-                            title="Concentration Distribution",
-                            xaxis_title="Penicillin Concentration (g/L)",
-                            yaxis_title="Frequency",
-                            height=400,
-                            showlegend=True
-                        )
-                        
-                        st.plotly_chart(fig3, use_container_width=True)
-                    
-                    # Prediction results table
-                    st.subheader("📈 Prediction Results")
-                    results_df = pd.DataFrame({
-                        'Sample': range(1, len(elasticnet_pred) + 1),
-                        'Actual (g/L)': ground_truth,
-                        'Predicted (g/L)': elasticnet_pred,
-                        'Residual (g/L)': residuals,
-                        'Error (%)': np.abs(residuals / ground_truth * 100)
-                    })
-                    
-                    st.dataframe(results_df, use_container_width=True)
-                    
+                # Check if preprocessed data is available
+                if st.session_state.preprocessed_data is None:
+                    st.error("Preprocessed data is not available. Please ensure data and models are loaded correctly.")
                 else:
-                    st.error(f"Target column '{target_col}' not found in data.")
+                    # Auto-run predictions
+                    num_spectra = min(100, len(st.session_state.preprocessed_data))
+                    subset_data = st.session_state.preprocessed_data[:num_spectra]
+                    
+                    # Make predictions
+                    elasticnet_pred = elastic_model.predict(subset_data)
+                    
+                    # Get target column and actual values
+                    target_col = 'Penicillin concentration(P:g/L)'
+                    if target_col in st.session_state.data.columns:
+                        ground_truth = st.session_state.data[target_col].values[:len(elasticnet_pred)]
+                        
+                        # Calculate performance metrics
+                        elasticnet_rmse = np.sqrt(mean_squared_error(ground_truth, elasticnet_pred))
+                        elasticnet_mae = mean_absolute_error(ground_truth, elasticnet_pred)
+                        elasticnet_r2 = r2_score(ground_truth, elasticnet_pred)
+                        elasticnet_mse = mean_squared_error(ground_truth, elasticnet_pred)
+                        
+                        # Performance metrics
+                        st.subheader("📈 Performance Metrics")
+                        col1, col2, col3, col4 = st.columns(4)
+                        
+                        with col1:
+                            st.metric("RMSE", f"{elasticnet_rmse:.3f} g/L")
+                        with col2:
+                            st.metric("MAE", f"{elasticnet_mae:.3f} g/L")
+                        with col3:
+                            st.metric("R² Score", f"{elasticnet_r2:.3f}")
+                        with col4:
+                            st.metric("MSE", f"{elasticnet_mse:.3f}")
+                        
+                        # Three plots in organized layout
+                        st.subheader("📊 Model Performance Analysis")
+                        
+                        # Calculate residuals
+                        residuals = elasticnet_pred - ground_truth
+                        
+                        # Create three columns for the plots
+                        col1, col2, col3 = st.columns(3)
+                        
+                        with col1:
+                            # Prediction vs Actual scatter plot
+                            fig1 = go.Figure()
+                            
+                            # Add scatter plot
+                            fig1.add_trace(go.Scatter(
+                                x=ground_truth,
+                                y=elasticnet_pred,
+                                mode='markers',
+                                name='ElasticNet Predictions',
+                                marker=dict(
+                                    color='#d62728',
+                                    size=8,
+                                    opacity=0.7
+                                ),
+                                showlegend=True
+                            ))
+                            
+                            # Add perfect prediction line
+                            min_val = min(min(ground_truth), min(elasticnet_pred))
+                            max_val = max(max(ground_truth), max(elasticnet_pred))
+                            fig1.add_trace(go.Scatter(
+                                x=[min_val, max_val],
+                                y=[min_val, max_val],
+                                mode='lines',
+                                name='Perfect Prediction',
+                                line=dict(color='#1f77b4', dash='dash'),
+                                showlegend=True
+                            ))
+                            
+                            fig1.update_layout(
+                                title="Prediction vs Actual",
+                                xaxis_title="Actual (g/L)",
+                                yaxis_title="Predicted (g/L)",
+                                height=400,
+                                showlegend=True
+                            )
+                            
+                            st.plotly_chart(fig1, width='stretch', config=PLOTLY_CONFIG)
+                        
+                        with col2:
+                            # Residuals distribution
+                            fig2 = go.Figure()
+                            fig2.add_trace(go.Histogram(
+                                x=residuals,
+                                nbinsx=20,
+                                name='Residuals',
+                                marker_color='#d62728',
+                                opacity=0.7
+                            ))
+                            
+                            fig2.update_layout(
+                                title="Residuals Distribution",
+                                xaxis_title="Residuals (g/L)",
+                                yaxis_title="Frequency",
+                                height=400,
+                                showlegend=False
+                            )
+                            
+                            st.plotly_chart(fig2, width='stretch', config=PLOTLY_CONFIG)
+                        
+                        with col3:
+                            # Concentration distribution
+                            fig3 = go.Figure()
+                            
+                            # Add actual concentration distribution
+                            fig3.add_trace(go.Histogram(
+                                x=ground_truth,
+                                nbinsx=20,
+                                name='Actual Concentrations',
+                                marker_color='#2ca02c',
+                                opacity=0.7
+                            ))
+                            
+                            # Add predicted concentration distribution
+                            fig3.add_trace(go.Histogram(
+                                x=elasticnet_pred,
+                                nbinsx=20,
+                                name='Predicted Concentrations',
+                                marker_color='#d62728',
+                                opacity=0.7
+                            ))
+                            
+                            fig3.update_layout(
+                                title="Concentration Distribution",
+                                xaxis_title="Penicillin Concentration (g/L)",
+                                yaxis_title="Frequency",
+                                height=400,
+                                showlegend=True
+                            )
+                            
+                            st.plotly_chart(fig3, width='stretch', config=PLOTLY_CONFIG)
+                        
+                        # Prediction results table
+                        st.subheader("📈 Prediction Results")
+                        results_df = pd.DataFrame({
+                            'Sample': range(1, len(elasticnet_pred) + 1),
+                            'Actual (g/L)': ground_truth,
+                            'Predicted (g/L)': elasticnet_pred,
+                            'Residual (g/L)': residuals,
+                            'Error (%)': np.abs(residuals / ground_truth * 100)
+                        })
+                        
+                        st.dataframe(results_df, width='stretch')
+                    else:
+                        st.error(f"Target column '{target_col}' not found in data.")
             else:
                 st.error("ElasticNet model not available.")
         else:
@@ -1379,7 +1456,7 @@ def main():
                                 showlegend=True
                             )
                             
-                            st.plotly_chart(fig, use_container_width=True, key="raw_spectra_pls")
+                            st.plotly_chart(fig, width='stretch', config=PLOTLY_CONFIG, key="raw_spectra_pls")
                             
                         except Exception as e:
                             st.error(f"Error processing raw spectra: {str(e)}")
@@ -1416,160 +1493,163 @@ def main():
                             showlegend=True
                         )
                         
-                        st.plotly_chart(fig, use_container_width=True, key="preprocessed_spectra_pls")
+                        st.plotly_chart(fig, width='stretch', config=PLOTLY_CONFIG, key="preprocessed_spectra_pls")
                     else:
                         st.error("Preprocessed data not available for visualization.")
                 
                 # PREDICTIONS SECTION
                 st.subheader("📊 PLS Predictions")
                 
-                # Auto-run predictions
-                num_spectra = min(100, len(st.session_state.preprocessed_data))
-                subset_data = st.session_state.preprocessed_data[:num_spectra]
-                
-                # Make predictions
-                pls_pred = pls_model.predict(subset_data)
-                
-                # Get target column and actual values
-                target_col = 'Penicillin concentration(P:g/L)'
-                if target_col in st.session_state.data.columns:
-                    ground_truth = st.session_state.data[target_col].values[:len(pls_pred)]
-                    
-                    # Calculate performance metrics
-                    pls_rmse = np.sqrt(mean_squared_error(ground_truth, pls_pred))
-                    pls_mae = mean_absolute_error(ground_truth, pls_pred)
-                    pls_r2 = r2_score(ground_truth, pls_pred)
-                    pls_mse = mean_squared_error(ground_truth, pls_pred)
-                    
-                    # Performance metrics
-                    st.subheader("📈 Performance Metrics")
-                    col1, col2, col3, col4 = st.columns(4)
-                    
-                    with col1:
-                        st.metric("RMSE", f"{pls_rmse:.3f} g/L")
-                    with col2:
-                        st.metric("MAE", f"{pls_mae:.3f} g/L")
-                    with col3:
-                        st.metric("R² Score", f"{pls_r2:.3f}")
-                    with col4:
-                        st.metric("MSE", f"{pls_mse:.3f}")
-                    
-                    # Three plots in organized layout
-                    st.subheader("📊 Model Performance Analysis")
-                    
-                    # Calculate residuals
-                    residuals = pls_pred - ground_truth
-                    
-                    # Create three columns for the plots
-                    col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
-                        # Prediction vs Actual scatter plot
-                        fig1 = go.Figure()
-                        
-                        # Add scatter plot
-                        fig1.add_trace(go.Scatter(
-                            x=ground_truth,
-                            y=pls_pred,
-                            mode='markers',
-                            name='PLS Predictions',
-                            marker=dict(
-                                color='#2ca02c',
-                                size=8,
-                                opacity=0.7
-                            ),
-                            showlegend=True
-                        ))
-                        
-                        # Add perfect prediction line
-                        min_val = min(min(ground_truth), min(pls_pred))
-                        max_val = max(max(ground_truth), max(pls_pred))
-                        fig1.add_trace(go.Scatter(
-                            x=[min_val, max_val],
-                            y=[min_val, max_val],
-                            mode='lines',
-                            name='Perfect Prediction',
-                            line=dict(color='#1f77b4', dash='dash'),
-                            showlegend=True
-                        ))
-                        
-                        fig1.update_layout(
-                            title="Prediction vs Actual",
-                            xaxis_title="Actual (g/L)",
-                            yaxis_title="Predicted (g/L)",
-                            height=400,
-                            showlegend=True
-                        )
-                        
-                        st.plotly_chart(fig1, use_container_width=True)
-                    
-                    with col2:
-                        # Residuals distribution
-                        fig2 = go.Figure()
-                        fig2.add_trace(go.Histogram(
-                            x=residuals,
-                            nbinsx=20,
-                            name='Residuals',
-                            marker_color='#2ca02c',
-                            opacity=0.7
-                        ))
-                        
-                        fig2.update_layout(
-                            title="Residuals Distribution",
-                            xaxis_title="Residuals (g/L)",
-                            yaxis_title="Frequency",
-                            height=400,
-                            showlegend=False
-                        )
-                        
-                        st.plotly_chart(fig2, use_container_width=True)
-                    
-                    with col3:
-                        # Concentration distribution
-                        fig3 = go.Figure()
-                        
-                        # Add actual concentration distribution
-                        fig3.add_trace(go.Histogram(
-                            x=ground_truth,
-                            nbinsx=20,
-                            name='Actual Concentrations',
-                            marker_color='#2ca02c',
-                            opacity=0.7
-                        ))
-                        
-                        # Add predicted concentration distribution
-                        fig3.add_trace(go.Histogram(
-                            x=pls_pred,
-                            nbinsx=20,
-                            name='Predicted Concentrations',
-                            marker_color='#ff7f0e',
-                            opacity=0.7
-                        ))
-                        
-                        fig3.update_layout(
-                            title="Concentration Distribution",
-                            xaxis_title="Penicillin Concentration (g/L)",
-                            yaxis_title="Frequency",
-                            height=400,
-                            showlegend=True
-                        )
-                        
-                        st.plotly_chart(fig3, use_container_width=True)
-                    
-                    # Prediction results table
-                    st.subheader("📈 Prediction Results")
-                    results_df = pd.DataFrame({
-                        'Sample': range(1, len(pls_pred) + 1),
-                        'Actual (g/L)': ground_truth,
-                        'Predicted (g/L)': pls_pred,
-                        'Residual (g/L)': residuals,
-                        'Error (%)': np.abs(residuals / ground_truth * 100)
-                    })
-                    
-                    st.dataframe(results_df, use_container_width=True)
-                    
+                # Check if preprocessed data is available
+                if st.session_state.preprocessed_data is None:
+                    st.error("Preprocessed data is not available. Please ensure data and models are loaded correctly.")
                 else:
-                    st.error(f"Target column '{target_col}' not found in data.")
+                    # Auto-run predictions
+                    num_spectra = min(100, len(st.session_state.preprocessed_data))
+                    subset_data = st.session_state.preprocessed_data[:num_spectra]
+                    
+                    # Make predictions
+                    pls_pred = pls_model.predict(subset_data)
+                    
+                    # Get target column and actual values
+                    target_col = 'Penicillin concentration(P:g/L)'
+                    if target_col in st.session_state.data.columns:
+                        ground_truth = st.session_state.data[target_col].values[:len(pls_pred)]
+                    
+                        # Calculate performance metrics
+                        pls_rmse = np.sqrt(mean_squared_error(ground_truth, pls_pred))
+                        pls_mae = mean_absolute_error(ground_truth, pls_pred)
+                        pls_r2 = r2_score(ground_truth, pls_pred)
+                        pls_mse = mean_squared_error(ground_truth, pls_pred)
+                        
+                        # Performance metrics
+                        st.subheader("📈 Performance Metrics")
+                        col1, col2, col3, col4 = st.columns(4)
+                        
+                        with col1:
+                            st.metric("RMSE", f"{pls_rmse:.3f} g/L")
+                        with col2:
+                            st.metric("MAE", f"{pls_mae:.3f} g/L")
+                        with col3:
+                            st.metric("R² Score", f"{pls_r2:.3f}")
+                        with col4:
+                            st.metric("MSE", f"{pls_mse:.3f}")
+                        
+                        # Three plots in organized layout
+                        st.subheader("📊 Model Performance Analysis")
+                        
+                        # Calculate residuals
+                        residuals = pls_pred - ground_truth
+                        
+                        # Create three columns for the plots
+                        col1, col2, col3 = st.columns(3)
+                        
+                        with col1:
+                            # Prediction vs Actual scatter plot
+                            fig1 = go.Figure()
+                            
+                            # Add scatter plot
+                            fig1.add_trace(go.Scatter(
+                                x=ground_truth,
+                                y=pls_pred,
+                                mode='markers',
+                                name='PLS Predictions',
+                                marker=dict(
+                                    color='#2ca02c',
+                                    size=8,
+                                    opacity=0.7
+                                ),
+                                showlegend=True
+                            ))
+                            
+                            # Add perfect prediction line
+                            min_val = min(min(ground_truth), min(pls_pred))
+                            max_val = max(max(ground_truth), max(pls_pred))
+                            fig1.add_trace(go.Scatter(
+                                x=[min_val, max_val],
+                                y=[min_val, max_val],
+                                mode='lines',
+                                name='Perfect Prediction',
+                                line=dict(color='#1f77b4', dash='dash'),
+                                showlegend=True
+                            ))
+                            
+                            fig1.update_layout(
+                                title="Prediction vs Actual",
+                                xaxis_title="Actual (g/L)",
+                                yaxis_title="Predicted (g/L)",
+                                height=400,
+                                showlegend=True
+                            )
+                            
+                            st.plotly_chart(fig1, width='stretch', config=PLOTLY_CONFIG)
+                        
+                        with col2:
+                            # Residuals distribution
+                            fig2 = go.Figure()
+                            fig2.add_trace(go.Histogram(
+                                x=residuals,
+                                nbinsx=20,
+                                name='Residuals',
+                                marker_color='#2ca02c',
+                                opacity=0.7
+                            ))
+                            
+                            fig2.update_layout(
+                                title="Residuals Distribution",
+                                xaxis_title="Residuals (g/L)",
+                                yaxis_title="Frequency",
+                                height=400,
+                                showlegend=False
+                            )
+                            
+                            st.plotly_chart(fig2, width='stretch', config=PLOTLY_CONFIG)
+                        
+                        with col3:
+                            # Concentration distribution
+                            fig3 = go.Figure()
+                            
+                            # Add actual concentration distribution
+                            fig3.add_trace(go.Histogram(
+                                x=ground_truth,
+                                nbinsx=20,
+                                name='Actual Concentrations',
+                                marker_color='#2ca02c',
+                                opacity=0.7
+                            ))
+                            
+                            # Add predicted concentration distribution
+                            fig3.add_trace(go.Histogram(
+                                x=pls_pred,
+                                nbinsx=20,
+                                name='Predicted Concentrations',
+                                marker_color='#ff7f0e',
+                                opacity=0.7
+                            ))
+                            
+                            fig3.update_layout(
+                                title="Concentration Distribution",
+                                xaxis_title="Penicillin Concentration (g/L)",
+                                yaxis_title="Frequency",
+                                height=400,
+                                showlegend=True
+                            )
+                            
+                            st.plotly_chart(fig3, width='stretch', config=PLOTLY_CONFIG)
+                        
+                        # Prediction results table
+                        st.subheader("📈 Prediction Results")
+                        results_df = pd.DataFrame({
+                            'Sample': range(1, len(pls_pred) + 1),
+                            'Actual (g/L)': ground_truth,
+                            'Predicted (g/L)': pls_pred,
+                            'Residual (g/L)': residuals,
+                            'Error (%)': np.abs(residuals / ground_truth * 100)
+                        })
+                        
+                        st.dataframe(results_df, width='stretch')
+                    else:
+                        st.error(f"Target column '{target_col}' not found in data.")
             else:
                 st.error("PLS model not available.")
         else:
@@ -1633,7 +1713,7 @@ def main():
                                 showlegend=True
                             )
                             
-                            st.plotly_chart(fig, use_container_width=True, key="raw_spectra_mlp_cnn")
+                            st.plotly_chart(fig, width='stretch', config=PLOTLY_CONFIG, key="raw_spectra_mlp_cnn")
                             
                         except Exception as e:
                             st.error(f"Error processing raw spectra: {str(e)}")
@@ -1670,7 +1750,7 @@ def main():
                             showlegend=True
                         )
                         
-                        st.plotly_chart(fig, use_container_width=True, key="preprocessed_spectra_mlp_cnn")
+                        st.plotly_chart(fig, width='stretch', config=PLOTLY_CONFIG, key="preprocessed_spectra_mlp_cnn")
                     else:
                         st.error("Preprocessed data not available for visualization.")
                 
@@ -1951,7 +2031,7 @@ def main():
                                     showlegend=True
                                 )
                                 
-                                st.plotly_chart(fig1, use_container_width=True, key="mlp_cnn_scatter")
+                                st.plotly_chart(fig1, width='stretch', config=PLOTLY_CONFIG, key="mlp_cnn_scatter")
                             
                             with col2:
                                 # Residuals distribution
@@ -1974,7 +2054,7 @@ def main():
                                     showlegend=True
                                 )
                                 
-                                st.plotly_chart(fig2, use_container_width=True, key="mlp_cnn_residuals")
+                                st.plotly_chart(fig2, width='stretch', config=PLOTLY_CONFIG, key="mlp_cnn_residuals")
                             
                             with col3:
                                 # Concentration distribution
@@ -2006,7 +2086,7 @@ def main():
                                     showlegend=True
                                 )
                                 
-                                st.plotly_chart(fig3, use_container_width=True, key="mlp_cnn_distribution")
+                                st.plotly_chart(fig3, width='stretch', config=PLOTLY_CONFIG, key="mlp_cnn_distribution")
                             
                             # Prediction Results Table
                             st.subheader("📈 Prediction Results")
@@ -2020,7 +2100,7 @@ def main():
                                 'Absolute Error (g/L)': np.abs(mlp_cnn_pred - ground_truth)
                             })
                             
-                            st.dataframe(results_df, use_container_width=True)
+                            st.dataframe(results_df, width='stretch')
                             
                         else:
                             st.error("Error preparing data for MLP+1D-CNN model.")
@@ -2106,7 +2186,7 @@ def main():
                                 showlegend=True
                             )
                             
-                            st.plotly_chart(fig1, use_container_width=True, key="mlp_cnn_scatter_demo")
+                            st.plotly_chart(fig1, width='stretch', config=PLOTLY_CONFIG, key="mlp_cnn_scatter_demo")
                         
                         with col2:
                             # Residuals distribution
@@ -2129,7 +2209,7 @@ def main():
                                 showlegend=True
                             )
                             
-                            st.plotly_chart(fig2, use_container_width=True, key="mlp_cnn_residuals_demo")
+                            st.plotly_chart(fig2, width='stretch', config=PLOTLY_CONFIG, key="mlp_cnn_residuals_demo")
                         
                         with col3:
                             # Concentration distribution
@@ -2161,7 +2241,7 @@ def main():
                                 showlegend=True
                             )
                             
-                            st.plotly_chart(fig3, use_container_width=True, key="mlp_cnn_distribution_demo")
+                            st.plotly_chart(fig3, width='stretch', config=PLOTLY_CONFIG, key="mlp_cnn_distribution_demo")
                         
                         # Prediction Results Table
                         st.subheader("📈 Prediction Results (Demo)")
@@ -2175,7 +2255,7 @@ def main():
                             'Absolute Error (g/L)': np.abs(mlp_cnn_pred - ground_truth)
                         })
                         
-                        st.dataframe(results_df, use_container_width=True)
+                        st.dataframe(results_df, width='stretch')
                         
                         st.info("🎭 **Note**: This is demo mode showing mock predictions. The actual MLP+1D-CNN model will be loaded when the model file is available.")
                         
@@ -2233,7 +2313,7 @@ def main():
                     }
                     
                     roadmap_df = pd.DataFrame(roadmap_data)
-                    st.dataframe(roadmap_df, use_container_width=True)
+                    st.dataframe(roadmap_df, width='stretch')
                 
             else:
                 st.error("Preprocessing pipeline not available.")
@@ -2250,7 +2330,7 @@ def main():
             
             # Display history table
             st.subheader("Recent Predictions")
-            st.dataframe(history_df, use_container_width=True)
+            st.dataframe(history_df, width='stretch')
             
             # Performance over time
             if len(history_df) > 1:
@@ -2279,7 +2359,7 @@ def main():
                     height=400
                 )
                 
-                st.plotly_chart(fig_history, use_container_width=True)
+                st.plotly_chart(fig_history, width='stretch', config=PLOTLY_CONFIG)
             
             # Clear history button
             if st.button("🗑️ Clear History"):
@@ -2421,8 +2501,8 @@ def main():
                         return 'background-color: #f8d7da; color: #721c24'
                     return ''
                 
-                styled_df = df_models.style.applymap(style_status, subset=['Status'])
-                st.dataframe(styled_df, use_container_width=True)
+                styled_df = df_models.style.map(style_status, subset=['Status'])
+                st.dataframe(styled_df, width='stretch')
                 
                 # Model details
                 selected_model = st.selectbox("Select model for details:", df_models['Name'].tolist())
@@ -2464,7 +2544,7 @@ def main():
                                 })
                             
                             df_versions = pd.DataFrame(versions_data)
-                            st.dataframe(df_versions, use_container_width=True)
+                            st.dataframe(df_versions, width='stretch')
             else:
                 st.info("No models found in the registry.")
             
@@ -2518,7 +2598,7 @@ def main():
                     })
                 
                 df_activity = pd.DataFrame(recent_activity)
-                st.dataframe(df_activity, use_container_width=True)
+                st.dataframe(df_activity, width='stretch')
             else:
                 st.info("No recent activity found.")
             
